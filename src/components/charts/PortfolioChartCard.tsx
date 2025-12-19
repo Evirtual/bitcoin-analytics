@@ -1,55 +1,55 @@
-import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts'
-import type { CandlePoint, CandleRange } from './types'
+import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts'
+import type { CandleRange } from './types'
 import { ChartFrame } from './ChartFrame'
 import { RangeToggle } from './range'
 import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
-import { computeDrawdown } from '../../lib/series'
+import { usd } from '../../lib/format'
 
-export function DrawdownChartCard({
-  assetKey,
+export type PortfolioItem = {
+  assetKey: string
+  usd: number
+}
+
+export function PortfolioChartCard({
   range,
   onRangeChange,
-  candles,
+  items,
   isLoading,
+  totalUsd,
 }: {
-  assetKey: string
   range: CandleRange
   onRangeChange: (r: CandleRange) => void
-  candles: CandlePoint[] | undefined
+  items: PortfolioItem[] | undefined
   isLoading: boolean
+  totalUsd: number
 }) {
-  const series = candles ? computeDrawdown(candles) : []
-
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>
-          {assetKey} Drawdown ({range})
-        </h2>
+        <h2>Portfolio Allocation</h2>
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
 
-      {series.length ? (
-        <ChartFrame fallback={<div className="empty">Loading chart…</div>}>
+      {isLoading ? (
+        <div className="chartWrap" style={{ height: '16.25em' }}>
+          <div className="empty">Loading…</div>
+        </div>
+      ) : items?.length ? (
+        <ChartFrame style={{ height: '16.25em' }} fallback={<div className="empty">Loading…</div>}>
           {({ width, height }) => {
             const compactView = width < 360
             const tickFontSize = compactView ? 11 : 12
-            const yAxisWidth = compactView ? 48 : 56
-            const xMinTickGap = compactView ? 40 : 64
+            const yAxisWidth = compactView ? 56 : 72
 
             return (
-              <AreaChart
+              <BarChart
                 width={width}
                 height={height}
-                data={series}
+                data={items}
                 margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
               >
                 <CartesianGrid stroke="var(--chartGrid)" />
-                <XAxis
-                  dataKey="t"
-                  tick={{ fontSize: tickFontSize, fill: 'var(--chartTick)' }}
-                  minTickGap={xMinTickGap}
-                />
+                <XAxis dataKey="assetKey" tick={{ fontSize: tickFontSize, fill: 'var(--chartTick)' }} />
                 <YAxis
                   tick={{ fontSize: tickFontSize, fill: 'var(--chartTick)' }}
                   axisLine={{ stroke: 'var(--chartAxis)' }}
@@ -61,25 +61,21 @@ export function DrawdownChartCard({
                   itemStyle={tooltipItemStyle}
                   formatter={(value) => {
                     const n = Number(value)
-                    return [Number.isFinite(n) ? `${n.toFixed(2)}%` : String(value), 'Drawdown']
+                    return [Number.isFinite(n) ? usd.format(n) : String(value), 'Value']
                   }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="dd"
-                  stroke="var(--accent)"
-                  fill="var(--accent)"
-                  fillOpacity={0.18}
-                />
-              </AreaChart>
+                <Bar dataKey="usd" fill="var(--accent)" opacity={0.72} />
+              </BarChart>
             )
           }}
         </ChartFrame>
       ) : (
-        <div className="chartWrap">
-          <div className="empty">{isLoading ? 'Loading chart…' : 'Chart unavailable'}</div>
+        <div className="chartWrap" style={{ height: '16.25em' }}>
+          <div className="empty">Data unavailable</div>
         </div>
       )}
+
+      <div className="footnote">Total ≈ {usd.format(totalUsd)}</div>
     </div>
   )
 }

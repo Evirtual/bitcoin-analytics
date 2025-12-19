@@ -27,34 +27,49 @@ export function VolatilityChartCard({
 
       {series.length ? (
         <ChartFrame fallback={<div className="empty">Loading chart…</div>}>
-          {({ width, height }) => (
-            <AreaChart
-              width={width}
-              height={height}
-              data={series}
-              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-            >
-              <CartesianGrid stroke="var(--chartGrid)" />
-              <XAxis dataKey="t" tick={{ fontSize: 12, fill: 'var(--chartTick)' }} minTickGap={64} />
-              <YAxis tick={{ fontSize: 12, fill: 'var(--chartTick)' }} axisLine={{ stroke: 'var(--chartAxis)' }} width={56} />
-              <Tooltip
-                contentStyle={tooltipContentStyle}
-                labelStyle={tooltipLabelStyle}
-                itemStyle={tooltipItemStyle}
-                formatter={(value) => {
-                  const n = Number(value)
-                  return [Number.isFinite(n) ? `${n.toFixed(2)}%` : String(value), 'Vol']
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="vol"
-                stroke="var(--accent)"
-                fill="var(--accent)"
-                fillOpacity={0.18}
-              />
-            </AreaChart>
-          )}
+          {({ width, height }) => {
+            const compactView = width < 360
+            const tickFontSize = compactView ? 11 : 12
+            const yAxisWidth = compactView ? 48 : 56
+            const xMinTickGap = compactView ? 40 : 64
+
+            return (
+              <AreaChart
+                width={width}
+                height={height}
+                data={series}
+                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid stroke="var(--chartGrid)" />
+                <XAxis
+                  dataKey="t"
+                  tick={{ fontSize: tickFontSize, fill: 'var(--chartTick)' }}
+                  minTickGap={xMinTickGap}
+                />
+                <YAxis
+                  tick={{ fontSize: tickFontSize, fill: 'var(--chartTick)' }}
+                  axisLine={{ stroke: 'var(--chartAxis)' }}
+                  width={yAxisWidth}
+                />
+                <Tooltip
+                  contentStyle={tooltipContentStyle}
+                  labelStyle={tooltipLabelStyle}
+                  itemStyle={tooltipItemStyle}
+                  formatter={(value) => {
+                    const n = Number(value)
+                    return [Number.isFinite(n) ? `${n.toFixed(2)}%` : String(value), 'Vol']
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="vol"
+                  stroke="var(--accent)"
+                  fill="var(--accent)"
+                  fillOpacity={0.18}
+                />
+              </AreaChart>
+            )
+          }}
         </ChartFrame>
       ) : (
         <div className="chartWrap">

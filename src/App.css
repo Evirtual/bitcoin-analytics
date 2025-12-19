@@ -4,6 +4,14 @@
   padding: 1.75rem 1.125rem 3rem;
 }
 
+.header,
+.toolbar,
+.cardHeader,
+.walletBar,
+.accountTop {
+  min-width: 0;
+}
+
 .header {
   display: flex;
   align-items: flex-start;
@@ -178,6 +186,7 @@
   background: linear-gradient(180deg, var(--card), var(--card2));
   border-radius: 0.875rem;
   padding: 0.875rem 0.875rem 0.75rem;
+  min-height: 7.25rem;
 }
 
 .kpiLabel {
@@ -196,6 +205,76 @@
   margin-top: 0.125rem;
   font-size: 0.75rem;
   color: var(--muted);
+}
+
+.moodCard {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.moodGauge {
+  position: relative;
+  width: 100%;
+  max-width: 16rem;
+  margin: 0 auto;
+}
+
+.moodGauge svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.moodArc {
+  fill: none;
+  stroke-width: 12;
+  stroke-linecap: round;
+  opacity: 0.95;
+}
+
+.moodArcLow {
+  stroke: color-mix(in srgb, var(--danger) 80%, transparent);
+}
+
+.moodArcMid {
+  stroke: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.moodArcHigh {
+  stroke: color-mix(in srgb, var(--accent2) 75%, transparent);
+}
+
+.moodPointerOuter {
+  fill: var(--bg1);
+  stroke: color-mix(in srgb, var(--stroke) 80%, transparent);
+  stroke-width: 2;
+}
+
+.moodPointerInner {
+  fill: var(--textStrong);
+}
+
+.moodCenter {
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  min-width: 9rem;
+}
+
+.moodValue {
+  font-size: clamp(1.5rem, 6vw, 2.25rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.moodLabel {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 700;
 }
 
 .pos {
@@ -238,6 +317,10 @@
   gap: 0.625rem;
 }
 
+.cardHeader > * {
+  min-width: 0;
+}
+
 .cardHeader h2 {
   margin: 0;
   font-size: 0.875rem;
@@ -252,9 +335,9 @@
   min-width: 0;
 }
 
-@media (max-width: 30rem) {
+@media (max-width: 40rem) {
   .page {
-    padding: 1.125rem 0.875rem 2.25rem;
+    padding: 1.25rem 1rem 2.5rem;
   }
 
   .header {
@@ -274,8 +357,47 @@
     width: 100%;
   }
 
+  .cardHeader {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .cardHeader h2 {
+    line-height: 1.25;
+  }
+
+  .chartWrap {
+    height: 16rem;
+  }
+
+  .modalOverlay {
+    place-items: start center;
+  }
+}
+
+@media (max-width: 30rem) {
+  .page {
+    padding: 1.125rem 0.875rem 2.25rem;
+  }
+
   .chartWrap {
     height: 15.5rem;
+  }
+
+  .modalHeader {
+    padding: 0.75rem 0.75rem 0.5625rem;
+  }
+
+  .modalBody {
+    padding: 0.75rem;
+  }
+
+  .accountTop {
+    gap: 0.625rem;
+  }
+
+  .accountTop .btn {
+    width: 100%;
   }
 }
 
@@ -348,6 +470,9 @@
   z-index: 50;
   display: grid;
   place-items: center;
+  padding: calc(0.875rem + env(safe-area-inset-top)) calc(0.875rem + env(safe-area-inset-right))
+    calc(0.875rem + env(safe-area-inset-bottom)) calc(0.875rem + env(safe-area-inset-left));
+  overflow-y: auto;
 }
 
 .modalBackdrop {
@@ -365,6 +490,8 @@
   border-radius: 1rem;
   box-shadow: 0 1.125rem 3.75rem rgba(0, 0, 0, 0.55);
   overflow: hidden;
+  max-height: calc(100vh - 1.75rem);
+  max-height: calc(100dvh - 1.75rem);
 }
 
 .modalHeader {
@@ -383,6 +510,8 @@
 
 .modalBody {
   padding: 0.875rem;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .iconBtn {
@@ -443,11 +572,16 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .accountTop .mono {
   margin-top: 0.25rem;
   word-break: break-all;
+}
+
+.accountTop .muted.small {
+  overflow-wrap: anywhere;
 }
 
 .assetList {
@@ -586,6 +720,17 @@
   .kpiGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+
+  .moodCard {
+    grid-row: span 2;
+    max-width: none;
+    min-height: calc(7.25rem * 2 + 0.75rem);
+  }
+
+  .moodGauge {
+    max-width: 18rem;
+  }
+
   .grid2 {
     grid-template-columns: 1.35fr 1fr;
   }

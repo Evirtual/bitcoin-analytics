@@ -1,4 +1,3 @@
-import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts'
 import { useCallback, useMemo, useState } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
@@ -7,20 +6,19 @@ import { useCandles, useChange24h, useSpotUsd, useSpotUsdMany } from './hooks/us
 import { useGasBalances } from './hooks/useGasBalances'
 import { AssetIcon } from './components/AssetIcon'
 import type { CandleRange } from './components/charts/types'
-import { ChartFrame } from './components/charts/ChartFrame'
-import { RangeToggle } from './components/charts/range'
 import { rangeToDays } from './components/charts/rangeUtils'
-import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './components/charts/chartTheme'
 import { PriceChartCard } from './components/charts/PriceChartCard'
 import { VolumeChartCard } from './components/charts/VolumeChartCard'
 import { DrawdownChartCard } from './components/charts/DrawdownChartCard'
 import { VolatilityChartCard } from './components/charts/VolatilityChartCard'
 import { ReturnsChartCard } from './components/charts/ReturnsChartCard'
+import { PortfolioChartCard } from './components/charts/PortfolioChartCard'
 import { Header } from './components/dashboard/Header'
+import { MarketMoodCard } from './components/dashboard/MarketMoodCard'
 import { AccountModal } from './components/wallet/AccountModal'
 import { ConnectWalletModal } from './components/wallet/ConnectWalletModal'
 import { useTheme } from './hooks/useTheme'
-import { usd } from './lib/format'
+import { compact, usd } from './lib/format'
 import './App.css'
 
 function formatConnectErrorMessage(message: string): string {
@@ -145,6 +143,30 @@ function App() {
     return { lo, hi, pct: lo > 0 ? ((hi - lo) / lo) * 100 : 0 }
   }, [priceCandles.data])
 
+  const periodReturn = useMemo(() => {
+    const pts = priceCandles.data ?? []
+    if (pts.length < 2) return undefined
+    const first = pts[0]?.price
+    const last = pts[pts.length - 1]?.price
+    if (!Number.isFinite(first) || !Number.isFinite(last) || first === 0) return undefined
+    return ((last - first) / first) * 100
+  }, [priceCandles.data])
+
+  const avgVolume = useMemo(() => {
+    const pts = volumeCandles.data ?? []
+    if (!pts.length) return undefined
+    let sum = 0
+    let n = 0
+    for (const p of pts) {
+      if (Number.isFinite(p.volume)) {
+        sum += p.volume
+        n++
+      }
+    }
+    if (!n) return undefined
+    return sum / n
+  }, [volumeCandles.data])
+
   const assetOptions = supportedAssetKeys
 
   const heldSet = useMemo(() => {
@@ -198,6 +220,8 @@ function App() {
       </div>
 
       <div className="kpiGrid">
+        <MarketMoodCard />
+
         <div className="kpiCard">
           <div className="kpiLabel">{assetKey} Price</div>
           <div className="kpiValue">
@@ -242,6 +266,26 @@ function App() {
         </div>
 
         <div className="kpiCard">
+          <div className="kpiLabel">Return ({priceRange})</div>
+          <div className="kpiValue">
+            {periodReturn !== undefined
+              ? `${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%`
+              : priceCandles.isLoading
+                ? 'Loading…'
+                : '—'}
+          </div>
+          <div className="kpiSub">
+            {periodReturn !== undefined ? (
+              <span className={periodReturn >= 0 ? 'pos' : 'neg'}>
+                {periodReturn >= 0 ? 'Uptrend' : 'Downtrend'}
+              </span>
+            ) : (
+              <span className="muted">—</span>
+            )}
+          </div>
+        </div>
+
+        <div className="kpiCard">
           <div className="kpiLabel">Portfolio (selected)</div>
           <div className="kpiValue">
             {isConnected && portfolioUsd !== undefined
@@ -251,6 +295,18 @@ function App() {
           <div className="kpiSub">
             <span className="muted">Shown in account popup</span>
           </div>
+        </div>
+
+        <div className="kpiCard">
+          <div className="kpiLabel">Avg Volume ({volumeRange})</div>
+          <div className="kpiValue">
+            {avgVolume !== undefined
+              ? compact.format(avgVolume)
+              : volumeCandles.isLoading
+                ? 'Loading…'
+                : '—'}
+          </div>
+          <div className="kpiSub muted">Per hour</div>
         </div>
       </div>
 
@@ -298,50 +354,13 @@ function App() {
 
       <section className="grid1">
         {isConnected ? (
-          <div className="card">
-            <div className="cardHeader">
-              <h2>Portfolio Allocation</h2>
-              <RangeToggle value={portfolioRange} onChange={setPortfolioRange} />
-            </div>
-
-            {assetTotals.isLoading || spotMany.isLoading ? (
-              <div className="chartWrap" style={{ height: '16.25em' }}>
-                <div className="empty">Loading…</div>
-              </div>
-            ) : (
-              <ChartFrame style={{ height: '16.25em' }} fallback={<div className="empty">Loading…</div>}>
-                {({ width, height }) => (
-                  <BarChart
-                    width={width}
-                    height={height}
-                    data={portfolioByAsset.items}
-                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                  >
-            chainIds={chainIds}
-                    <CartesianGrid stroke="var(--chartGrid)" />
-                    <XAxis dataKey="assetKey" tick={{ fontSize: 12, fill: 'var(--chartTick)' }} />
-                    <YAxis
-                      tick={{ fontSize: 12, fill: 'var(--chartTick)' }}
-                      axisLine={{ stroke: 'var(--chartAxis)' }}
-                      width={72}
-                    />
-                    <Tooltip
-                      contentStyle={tooltipContentStyle}
-                      labelStyle={tooltipLabelStyle}
-                      itemStyle={tooltipItemStyle}
-                      formatter={(value) => {
-                        const n = Number(value)
-                        return [Number.isFinite(n) ? usd.format(n) : String(value), 'Value']
-                      }}
-                    />
-                    <Bar dataKey="usd" fill="var(--accent)" opacity={0.72} />
-                  </BarChart>
-                )}
-              </ChartFrame>
-            )}
-
-            <div className="footnote">Total ≈ {usd.format(portfolioByAsset.totalUsd)}</div>
-          </div>
+          <PortfolioChartCard
+            range={portfolioRange}
+            onRangeChange={setPortfolioRange}
+            items={portfolioByAsset.items}
+            isLoading={assetTotals.isLoading || spotMany.isLoading}
+            totalUsd={portfolioByAsset.totalUsd}
+          />
         ) : null}
       </section>
 
