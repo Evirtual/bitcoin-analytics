@@ -395,10 +395,6 @@
   .accountTop {
     gap: 0.625rem;
   }
-
-  .accountTop .btn {
-    width: 100%;
-  }
 }
 
 .empty {
@@ -575,13 +571,62 @@
   flex-wrap: wrap;
 }
 
-.accountTop .mono {
+.accountTop > div {
+  width: 100%;
+}
+
+.addressRow {
   margin-top: 0.25rem;
-  word-break: break-all;
+  display: flex;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.addressInput {
+  width: 100%;
+  min-width: 0;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+  color: var(--textStrong);
+  border-radius: 0.625rem;
+  padding: 0.875rem 0.875rem;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.addressRow .iconBtn {
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  min-width: 2.75rem;
+  padding: 0.5rem 0.625rem;
+}
+
+.addressInput:focus {
+  outline: 0.25rem auto -webkit-focus-ring-color;
 }
 
 .accountTop .muted.small {
   overflow-wrap: anywhere;
+}
+
+.accountFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.accountFooter .footnote {
+  margin-top: 0;
+}
+
+.accountFooter .btn {
+  flex: 0 0 auto;
 }
 
 .assetList {

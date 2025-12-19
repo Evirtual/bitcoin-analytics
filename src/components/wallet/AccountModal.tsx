@@ -68,8 +68,6 @@ export function AccountModal<T extends { uid: string; name: string }>({
   onDisconnect,
   assetTotals,
   spotMany,
-  selectedAssetKey,
-  onSelectAsset,
   chainIds,
   portfolioTotalUsd,
 }: {
@@ -84,8 +82,6 @@ export function AccountModal<T extends { uid: string; name: string }>({
   onDisconnect: () => void
   assetTotals: { isLoading: boolean; data: AssetTotal[] | undefined }
   spotMany: { isLoading: boolean; data: Map<AssetKey, number> }
-  selectedAssetKey: AssetKey
-  onSelectAsset: (assetKey: AssetKey) => void
   chainIds: ChainId[]
   portfolioTotalUsd: number
 }) {
@@ -102,6 +98,28 @@ export function AccountModal<T extends { uid: string; name: string }>({
     return rows.filter((a) => a.totalAmount > 0)
   }, [assetTotals.data])
 
+  const copyAddress = async () => {
+    if (!address) return
+    try {
+      await navigator.clipboard.writeText(address)
+    } catch {
+      // Fallback for older browsers / non-secure contexts.
+      try {
+        const el = document.createElement('textarea')
+        el.value = address
+        el.setAttribute('readonly', 'true')
+        el.style.position = 'fixed'
+        el.style.left = '-9999px'
+        document.body.appendChild(el)
+        el.select()
+        document.execCommand('copy')
+        document.body.removeChild(el)
+      } catch {
+        // ignore
+      }
+    }
+  }
+
   return (
     <Modal open={open} title="Account" onClose={handleClose}>
       {!isConnected ? (
@@ -112,21 +130,34 @@ export function AccountModal<T extends { uid: string; name: string }>({
       ) : (
         <div className="stack">
           <div className="accountTop">
-            <div>
-              <div className="muted small">Address</div>
-              <div className="mono">{address}</div>
-              <div className="muted small" style={{ marginTop: '0.375em' }}>
-                Gas:{' '}
-                {gas.isLoading
-                  ? 'Loading…'
-                  : gas.data
-                    ? gas.data.map((g) => `${g.chainName} ${g.formatted} ${g.symbol}`).join(' • ')
-                    : 'Unavailable'}
-              </div>
+            <div className="muted small">Address</div>
+            <div className="addressRow">
+                <input
+                    className="addressInput"
+                    value={address ?? ''}
+                    readOnly
+                    aria-label="Wallet address"
+                    onFocus={(e) => e.currentTarget.select()}
+                />
+                <button
+                    className="iconBtn"
+                    type="button"
+                    onClick={() => void copyAddress()}
+                    aria-label="Copy address"
+                    title="Copy address"
+                    disabled={!address}
+                >
+                    ⧉
+                </button>
             </div>
-            <button className="btn" onClick={onDisconnect}>
-              Disconnect
-            </button>
+            <div className="muted small" style={{ marginTop: '0.375em' }}>
+            Gas:{' '}
+            {gas.isLoading
+                ? 'Loading…'
+                : gas.data
+                ? gas.data.map((g) => `${g.chainName} ${g.formatted} ${g.symbol}`).join(' • ')
+                : 'Unavailable'}
+            </div>
           </div>
 
           <div className="divider" />
@@ -154,9 +185,8 @@ export function AccountModal<T extends { uid: string; name: string }>({
                     }
                   >
                     <button
-                      className={a.assetKey === selectedAssetKey ? 'assetRow assetRowActive' : 'assetRow'}
+                      className='assetRow'
                       onClick={() => {
-                        onSelectAsset(a.assetKey)
                         setExpandedAssetKey((prev) => (prev === a.assetKey ? null : a.assetKey))
                       }}
                       type="button"
@@ -201,7 +231,12 @@ export function AccountModal<T extends { uid: string; name: string }>({
             )}
           </div>
 
-          <div className="footnote">Portfolio total ≈ {usd.format(portfolioTotalUsd)}</div>
+          <div className="accountFooter">
+            <div className="footnote">Portfolio total ≈ {usd.format(portfolioTotalUsd)}</div>
+            <button className="btn" onClick={onDisconnect} type="button">
+              Disconnect
+            </button>
+          </div>
         </div>
       )}
     </Modal>

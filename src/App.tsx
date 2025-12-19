@@ -390,8 +390,6 @@ function App() {
         onDisconnect={() => disconnect()}
         assetTotals={{ isLoading: assetTotals.isLoading, data: assetTotals.data }}
         spotMany={spotMany}
-        selectedAssetKey={assetKey}
-        onSelectAsset={(k) => setAssetKey(k)}
         chainIds={chainIds}
         portfolioTotalUsd={portfolioByAsset.totalUsd}
       />
