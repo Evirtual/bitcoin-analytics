@@ -4,16 +4,15 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
-import { useAssetBalances, useUserAssetTotals, useUserNonZeroAssets } from './hooks/useAssetBalances'
-import { useCandles7d, useChange24h, useSpotUsd, useSpotUsdMany } from './hooks/useMarket'
+import { useAssetBalances, useUserAssetTotals } from './hooks/useAssetBalances'
+import { useCandles, useChange24h, useSpotUsd, useSpotUsdMany } from './hooks/useMarket'
 import { useGasBalances } from './hooks/useGasBalances'
 import { Modal } from './components/Modal'
 import { AssetIcon } from './components/AssetIcon'
@@ -49,6 +48,78 @@ const tooltipItemStyle: React.CSSProperties = {
   padding: 0,
 }
 
+function connectorInitials(name: string): string {
+  const cleaned = name
+    .replace(/\(.*?\)/g, ' ')
+    .replace(/[^a-zA-Z0-9 ]/g, ' ')
+    .trim()
+  if (!cleaned) return 'W'
+  const parts = cleaned.split(/\s+/).filter(Boolean)
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase()
+  return (parts[0]!.slice(0, 1) + parts[1]!.slice(0, 1)).toUpperCase()
+}
+
+function ChartFrame({
+  style,
+  fallback,
+  children,
+}: {
+  style?: React.CSSProperties
+  fallback: React.ReactNode
+  children: (size: { width: number; height: number }) => React.ReactNode
+}) {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [size, setSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const update = () => {
+      const r = el.getBoundingClientRect()
+      const width = Math.floor(r.width)
+      const height = Math.floor(r.height)
+      setSize({ width: width > 0 ? width : 0, height: height > 0 ? height : 0 })
+    }
+
+    update()
+    const ro = new ResizeObserver(() => update())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  return (
+    <div ref={ref} className="chartWrap" style={style}>
+      {size.width > 0 && size.height > 0 ? children(size) : fallback}
+    </div>
+  )
+}
+
+type CandleRange = '1D' | '1W' | '1M'
+
+function rangeToDays(r: CandleRange) {
+  if (r === '1D') return 1
+  if (r === '1M') return 30
+  return 7
+}
+
+function RangeToggle({ value, onChange }: { value: CandleRange; onChange: (v: CandleRange) => void }) {
+  return (
+    <div className="segmented" aria-label="Candle range">
+      {(['1D', '1W', '1M'] as const).map((r) => (
+        <button
+          key={r}
+          className={r === value ? 'segBtn segBtnActive' : 'segBtn'}
+          type="button"
+          onClick={() => onChange(r)}
+        >
+          <span className="segLabel">{r}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function App() {
   const { address, isConnected, chain } = useAccount()
   const {
@@ -62,7 +133,6 @@ function App() {
   const chainIds = useMemo<ChainId[]>(() => [1, 8453, 56], [])
 
   const supportedAssetKeys = useMemo<AssetKey[]>(() => ['BTC', 'ETH', 'USDT', 'USDC'], [])
-  const heldAssets = useUserNonZeroAssets(address, chainIds, supportedAssetKeys)
   const assetTotals = useUserAssetTotals(address, chainIds, supportedAssetKeys)
 
   const spotMany = useSpotUsdMany(supportedAssetKeys)
@@ -75,7 +145,20 @@ function App() {
 
   const spotUsd = useSpotUsd(assetKey)
   const change24h = useChange24h(assetKey)
-  const candles7d = useCandles7d(assetKey)
+
+  const [priceRange, setPriceRange] = useState<CandleRange>('1W')
+  const [volumeRange, setVolumeRange] = useState<CandleRange>('1W')
+  const [returnsRange, setReturnsRange] = useState<CandleRange>('1W')
+  const [portfolioRange, setPortfolioRange] = useState<CandleRange>('1W')
+
+  const priceDays = useMemo(() => rangeToDays(priceRange) as 1 | 7 | 30, [priceRange])
+  const volumeDays = useMemo(() => rangeToDays(volumeRange) as 1 | 7 | 30, [volumeRange])
+  const returnsDays = useMemo(() => rangeToDays(returnsRange) as 1 | 7 | 30, [returnsRange])
+
+  const priceCandles = useCandles(assetKey, priceDays)
+  const volumeCandles = useCandles(assetKey, volumeDays)
+  const returnsCandles = useCandles(assetKey, returnsDays)
+
   const balances = useAssetBalances(address, assetKey, chainIds)
   const gas = useGasBalances(address, chainIds)
 
@@ -102,7 +185,7 @@ function App() {
   const [accountOpen, setAccountOpen] = useState(false)
 
   const dailyReturns = useMemo(() => {
-    const points = candles7d.data ?? []
+    const points = returnsCandles.data ?? []
     const dayMap = new Map<string, { first?: number; last?: number }>()
     for (const p of points) {
       // p.t is localized string; group by date portion
@@ -116,10 +199,10 @@ function App() {
       const r = v.first && v.last ? ((v.last - v.first) / v.first) * 100 : 0
       return { day, ret: Number.isFinite(r) ? r : 0 }
     })
-  }, [candles7d.data])
+  }, [returnsCandles.data])
 
   const range7d = useMemo(() => {
-    const pts = candles7d.data ?? []
+    const pts = priceCandles.data ?? []
     if (!pts.length) return undefined
     let lo = Infinity
     let hi = -Infinity
@@ -129,15 +212,17 @@ function App() {
     }
     if (!Number.isFinite(lo) || !Number.isFinite(hi)) return undefined
     return { lo, hi, pct: lo > 0 ? ((hi - lo) / lo) * 100 : 0 }
-  }, [candles7d.data])
+  }, [priceCandles.data])
 
   const assetOptions = supportedAssetKeys
 
   const heldSet = useMemo(() => {
     const set = new Set<AssetKey>()
-    for (const a of heldAssets.data ?? []) set.add(a.assetKey)
+    for (const a of assetTotals.data ?? []) {
+      if ((a.totalAmount ?? 0) > 0) set.add(a.assetKey)
+    }
     return set
-  }, [heldAssets.data])
+  }, [assetTotals.data])
 
   return (
     <div
@@ -195,9 +280,7 @@ function App() {
             </button>
           ))}
         </div>
-        <div className="muted small">
-          {heldAssets.isLoading ? 'Refreshing…' : 'Market dashboard'}
-        </div>
+        <div className="muted small">{assetTotals.isLoading ? 'Refreshing…' : 'Market dashboard'}</div>
       </div>
 
       <div className="kpiGrid">
@@ -219,11 +302,11 @@ function App() {
         </div>
 
         <div className="kpiCard">
-          <div className="kpiLabel">7d Range</div>
+          <div className="kpiLabel">Range ({priceRange})</div>
           <div className="kpiValue">
             {range7d
               ? `${range7d.pct.toFixed(2)}%`
-              : candles7d.isLoading
+              : priceCandles.isLoading
                 ? 'Loading…'
                 : '—'}
           </div>
@@ -233,9 +316,13 @@ function App() {
         </div>
 
         <div className="kpiCard">
-          <div className="kpiLabel">7d Points</div>
+          <div className="kpiLabel">Points ({priceRange})</div>
           <div className="kpiValue">
-            {candles7d.data ? `${candles7d.data.length}` : candles7d.isLoading ? 'Loading…' : '—'}
+            {priceCandles.data
+              ? `${priceCandles.data.length}`
+              : priceCandles.isLoading
+                ? 'Loading…'
+                : '—'}
           </div>
           <div className="kpiSub muted">Hourly candles</div>
         </div>
@@ -256,14 +343,21 @@ function App() {
       <section className="grid2">
         <div className="card">
           <div className="cardHeader">
-            <h2>{assetKey} Price (7d)</h2>
-            <div className="muted">Hourly</div>
+            <h2>
+              {assetKey} Price ({priceRange})
+            </h2>
+            <RangeToggle value={priceRange} onChange={setPriceRange} />
           </div>
 
-          <div className="chartWrap">
-            {candles7d.data ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={candles7d.data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          {priceCandles.data ? (
+            <ChartFrame fallback={<div className="empty">Loading chart…</div>}>
+              {({ width, height }) => (
+                <AreaChart
+                  width={width}
+                  height={height}
+                  data={priceCandles.data}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                >
                   <CartesianGrid stroke="rgba(255,255,255,0.08)" />
                   <XAxis dataKey="t" tick={{ fontSize: 12 }} minTickGap={48} />
                   <YAxis tick={{ fontSize: 12 }} width={72} />
@@ -276,25 +370,42 @@ function App() {
                       return [Number.isFinite(n) ? usd.format(n) : String(value), 'Price']
                     }}
                   />
-                  <Area type="monotone" dataKey="price" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.18} />
+                  <Area
+                    type="monotone"
+                    dataKey="price"
+                    stroke="var(--accent)"
+                    fill="var(--accent)"
+                    fillOpacity={0.18}
+                  />
                 </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="empty">{candles7d.isLoading ? 'Loading chart…' : 'Chart unavailable'}</div>
-            )}
-          </div>
+              )}
+            </ChartFrame>
+          ) : (
+            <div className="chartWrap">
+              <div className="empty">
+                {priceCandles.isLoading ? 'Loading chart…' : 'Chart unavailable'}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="card">
           <div className="cardHeader">
-            <h2>{assetKey} Volume (7d)</h2>
-            <div className="muted">Hourly</div>
+            <h2>
+              {assetKey} Volume ({volumeRange})
+            </h2>
+            <RangeToggle value={volumeRange} onChange={setVolumeRange} />
           </div>
 
-          <div className="chartWrap">
-            {candles7d.data ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={candles7d.data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          {volumeCandles.data ? (
+            <ChartFrame fallback={<div className="empty">Loading chart…</div>}>
+              {({ width, height }) => (
+                <BarChart
+                  width={width}
+                  height={height}
+                  data={volumeCandles.data}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                >
                   <CartesianGrid stroke="rgba(255,255,255,0.08)" />
                   <XAxis dataKey="t" tick={{ fontSize: 12 }} minTickGap={64} />
                   <YAxis tick={{ fontSize: 12 }} width={72} />
@@ -309,24 +420,34 @@ function App() {
                   />
                   <Bar dataKey="volume" fill="var(--accent)" opacity={0.65} />
                 </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="empty">{candles7d.isLoading ? 'Loading chart…' : 'Chart unavailable'}</div>
-            )}
-          </div>
+              )}
+            </ChartFrame>
+          ) : (
+            <div className="chartWrap">
+              <div className="empty">
+                {volumeCandles.isLoading ? 'Loading chart…' : 'Chart unavailable'}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
       <section className="grid1">
         <div className="card">
           <div className="cardHeader">
-            <h2>Daily Returns (7d)</h2>
-            <div className="muted">% change per day</div>
+            <h2>Daily Returns ({returnsRange})</h2>
+            <RangeToggle value={returnsRange} onChange={setReturnsRange} />
           </div>
-          <div className="chartWrap" style={{ height: '16.25em' }}>
-            {dailyReturns.length ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dailyReturns} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+
+          {dailyReturns.length ? (
+            <ChartFrame style={{ height: '16.25em' }} fallback={<div className="empty">Loading…</div>}>
+              {({ width, height }) => (
+                <BarChart
+                  width={width}
+                  height={height}
+                  data={dailyReturns}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                >
                   <CartesianGrid stroke="rgba(255,255,255,0.08)" />
                   <XAxis dataKey="day" tick={{ fontSize: 12 }} minTickGap={24} />
                   <YAxis tick={{ fontSize: 12 }} width={56} />
@@ -341,54 +462,58 @@ function App() {
                   />
                   <Bar dataKey="ret" fill="var(--accent)" opacity={0.72} />
                 </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="empty">{candles7d.isLoading ? 'Loading…' : 'Data unavailable'}</div>
-            )}
-          </div>
+              )}
+            </ChartFrame>
+          ) : (
+            <div className="chartWrap">
+              <div className="empty">{returnsCandles.isLoading ? 'Loading…' : 'Data unavailable'}</div>
+            </div>
+          )}
         </div>
       </section>
 
       <section className="grid1">
-        <div className="card">
-          <div className="cardHeader">
-            <h2>Portfolio Allocation</h2>
-            <div className="muted">USD value by asset</div>
-          </div>
+        {isConnected ? (
+          <div className="card">
+            <div className="cardHeader">
+              <h2>Portfolio Allocation</h2>
+              <RangeToggle value={portfolioRange} onChange={setPortfolioRange} />
+            </div>
 
-          <div className="chartWrap" style={{ height: '16.25em' }}>
-            {!isConnected ? (
-              <div className="empty">Connect wallet to see portfolio allocation</div>
-            ) : assetTotals.isLoading || spotMany.isLoading ? (
-              <div className="empty">Loading…</div>
+            {assetTotals.isLoading || spotMany.isLoading ? (
+              <div className="chartWrap" style={{ height: '16.25em' }}>
+                <div className="empty">Loading…</div>
+              </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={portfolioByAsset.items}
-                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-                  <XAxis dataKey="assetKey" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} width={72} />
-                  <Tooltip
-                    contentStyle={tooltipContentStyle}
-                    labelStyle={tooltipLabelStyle}
-                    itemStyle={tooltipItemStyle}
-                    formatter={(value) => {
-                      const n = Number(value)
-                      return [Number.isFinite(n) ? usd.format(n) : String(value), 'Value']
-                    }}
-                  />
-                  <Bar dataKey="usd" fill="var(--accent)" opacity={0.72} />
-                </BarChart>
-              </ResponsiveContainer>
+              <ChartFrame style={{ height: '16.25em' }} fallback={<div className="empty">Loading…</div>}>
+                {({ width, height }) => (
+                  <BarChart
+                    width={width}
+                    height={height}
+                    data={portfolioByAsset.items}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid stroke="rgba(255,255,255,0.08)" />
+                    <XAxis dataKey="assetKey" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} width={72} />
+                    <Tooltip
+                      contentStyle={tooltipContentStyle}
+                      labelStyle={tooltipLabelStyle}
+                      itemStyle={tooltipItemStyle}
+                      formatter={(value) => {
+                        const n = Number(value)
+                        return [Number.isFinite(n) ? usd.format(n) : String(value), 'Value']
+                      }}
+                    />
+                    <Bar dataKey="usd" fill="var(--accent)" opacity={0.72} />
+                  </BarChart>
+                )}
+              </ChartFrame>
             )}
-          </div>
 
-          <div className="footnote">
-            Total ≈ {isConnected ? usd.format(portfolioByAsset.totalUsd) : '—'}
+            <div className="footnote">Total ≈ {usd.format(portfolioByAsset.totalUsd)}</div>
           </div>
-        </div>
+        ) : null}
       </section>
 
       <Modal open={connectOpen} title="Connect Wallet" onClose={() => setConnectOpen(false)}>
@@ -403,7 +528,12 @@ function App() {
               }}
               disabled={isConnecting}
             >
-              <div className="connectName">{c.name}</div>
+              <div className="connectLeft">
+                <div className="connectIcon" aria-hidden="true">
+                  {connectorInitials(c.name)}
+                </div>
+                <div className="connectName">{c.name}</div>
+              </div>
               <div className="muted small">Select</div>
             </button>
           ))}
@@ -425,7 +555,12 @@ function App() {
                   }}
                   disabled={isConnecting}
                 >
-                  <div className="connectName">{c.name}</div>
+                  <div className="connectLeft">
+                    <div className="connectIcon" aria-hidden="true">
+                      {connectorInitials(c.name)}
+                    </div>
+                    <div className="connectName">{c.name}</div>
+                  </div>
                   <div className="muted small">Select</div>
                 </button>
               ))}

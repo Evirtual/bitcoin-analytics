@@ -4,6 +4,19 @@ import { base, bsc, mainnet } from 'viem/chains'
 
 export type ChainId = 1 | 8453 | 56
 
+function isRateLimitError(err: unknown): boolean {
+  const e = err as any
+  const status = e?.status ?? e?.cause?.status ?? e?.response?.status
+  if (status === 429) return true
+  const msg = String(e?.message ?? '')
+  return msg.includes('429') || msg.toLowerCase().includes('rate limit')
+}
+
+function retryDelayMs(failureCount: number, err: unknown) {
+  if (isRateLimitError(err)) return Math.min(60_000, 2_000 * 2 ** failureCount)
+  return Math.min(10_000, 1_000 * 2 ** failureCount)
+}
+
 const erc20Abi = [
   {
     type: 'function',
@@ -32,11 +45,14 @@ const tokenByChain: Record<ChainId, { symbol: string; address: Address; decimals
 }
 
 function getClient(chainId: ChainId) {
+  const mainnetRpc = import.meta.env.VITE_RPC_MAINNET as string | undefined
+  const baseRpc = import.meta.env.VITE_RPC_BASE as string | undefined
+  const bscRpc = import.meta.env.VITE_RPC_BSC as string | undefined
   if (chainId === 1)
-    return createPublicClient({ chain: mainnet, transport: http() })
+    return createPublicClient({ chain: mainnet, transport: http(mainnetRpc) })
   if (chainId === 8453)
-    return createPublicClient({ chain: base, transport: http() })
-  return createPublicClient({ chain: bsc, transport: http() })
+    return createPublicClient({ chain: base, transport: http(baseRpc) })
+  return createPublicClient({ chain: bsc, transport: http(bscRpc) })
 }
 
 function chainName(chainId: ChainId) {
@@ -57,28 +73,35 @@ export function useWbtcBalances(address: Address | undefined, chainIds: ChainId[
     queryFn: async () => {
       if (!address) throw new Error('No address')
 
-      const rows = await Promise.all(
-        chainIds.map(async (cid) => {
-          const token = tokenByChain[cid]
-          const client = getClient(cid)
-          const balance = await client.readContract({
-            address: token.address,
-            abi: erc20Abi,
-            functionName: 'balanceOf',
-            args: [address],
-          })
-          const formatted = formatUnits(balance, token.decimals)
-          const amount = Number(formatted)
-          return {
-            chainId: cid,
-            chainName: chainName(cid),
-            tokenSymbol: token.symbol,
-            raw: balance as bigint,
-            formatted,
-            amount: Number.isFinite(amount) ? amount : 0,
-          }
-        }),
-      )
+      const rows: Array<{
+        chainId: ChainId
+        chainName: string
+        tokenSymbol: string
+        raw: bigint
+        formatted: string
+        amount: number
+      }> = []
+
+      for (const cid of chainIds) {
+        const token = tokenByChain[cid]
+        const client = getClient(cid)
+        const balance = await client.readContract({
+          address: token.address,
+          abi: erc20Abi,
+          functionName: 'balanceOf',
+          args: [address],
+        })
+        const formatted = formatUnits(balance, token.decimals)
+        const amount = Number(formatted)
+        rows.push({
+          chainId: cid,
+          chainName: chainName(cid),
+          tokenSymbol: token.symbol,
+          raw: balance as bigint,
+          formatted,
+          amount: Number.isFinite(amount) ? amount : 0,
+        })
+      }
 
       // Total: normalize via bigint into 1e8 “sats-like” scale where possible.
       // Since BSC uses 18 decimals for BTCB, we compute totals by parsing floats to keep this simple.
@@ -98,7 +121,10 @@ export function useWbtcBalances(address: Address | undefined, chainIds: ChainId[
         totalFormatted: totalAmount.toLocaleString(undefined, { maximumFractionDigits: 8 }),
       }
     },
-    staleTime: 20_000,
-    refetchInterval: 20_000,
+    staleTime: 2 * 60_000,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    retry: (failureCount, err) => isRateLimitError(err) && failureCount < 3,
+    retryDelay: (failureCount, err) => retryDelayMs(failureCount, err),
   })
 }

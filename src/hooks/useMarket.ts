@@ -28,12 +28,80 @@ function toNumber(value: string | number | undefined | null): number {
   return Number.isFinite(n) ? n : NaN
 }
 
-async function fetchCoinbaseSpotUsd(assetKey: AssetKey): Promise<number> {
+type MarketCacheEntry = { v: number; ts: number }
+
+const SPOT_CACHE_TTL_MS = 60_000
+const COINBASE_BACKOFF_MS = 5 * 60_000
+
+function cacheKeySpot(assetKey: AssetKey) {
+  return `market.spot.usd.${assetKey}`
+}
+
+function readSpotCache(assetKey: AssetKey): number | undefined {
+  try {
+    const raw = localStorage.getItem(cacheKeySpot(assetKey))
+    if (!raw) return undefined
+    const parsed = JSON.parse(raw) as Partial<MarketCacheEntry>
+    if (!parsed || typeof parsed.v !== 'number' || typeof parsed.ts !== 'number') return undefined
+    if (Date.now() - parsed.ts > SPOT_CACHE_TTL_MS) return undefined
+    return parsed.v
+  } catch {
+    return undefined
+  }
+}
+
+function writeSpotCache(assetKey: AssetKey, value: number) {
+  try {
+    const entry: MarketCacheEntry = { v: value, ts: Date.now() }
+    localStorage.setItem(cacheKeySpot(assetKey), JSON.stringify(entry))
+  } catch {
+    // ignore cache write failures
+  }
+}
+
+function coinbaseDownKey(kind: 'spot' | 'candles') {
+  return `market.coinbase.${kind}.downUntil`
+}
+
+function readDownUntil(kind: 'spot' | 'candles'): number {
+  try {
+    const raw = sessionStorage.getItem(coinbaseDownKey(kind))
+    const n = raw ? Number(raw) : 0
+    return Number.isFinite(n) ? n : 0
+  } catch {
+    return 0
+  }
+}
+
+function setDownUntil(kind: 'spot' | 'candles', until: number) {
+  try {
+    sessionStorage.setItem(coinbaseDownKey(kind), String(until))
+  } catch {
+    // ignore
+  }
+}
+
+function markCoinbaseDown(kind: 'spot' | 'candles') {
+  setDownUntil(kind, Date.now() + COINBASE_BACKOFF_MS)
+}
+
+function shouldSkipCoinbase(kind: 'spot' | 'candles') {
+  return Date.now() < readDownUntil(kind)
+}
+
+function isRateLimitStatus(status: number) {
+  return status === 429 || status === 503
+}
+
+async function fetchCoinbaseSpotUsd(assetKey: AssetKey, signal?: AbortSignal): Promise<number> {
   const asset = ASSETS[assetKey]
   if (!asset.spotSymbol) throw new Error('No spot symbol configured')
 
-  const res = await fetch(`https://api.coinbase.com/v2/prices/${asset.spotSymbol}-USD/spot`)
-  if (!res.ok) throw new Error('Coinbase spot failed')
+  const res = await fetch(`https://api.coinbase.com/v2/prices/${asset.spotSymbol}-USD/spot`, { signal })
+  if (!res.ok) {
+    if (isRateLimitStatus(res.status)) markCoinbaseDown('spot')
+    throw new Error('Coinbase spot failed')
+  }
   const json = (await res.json()) as CoinbaseSpotResponse
   const amount = toNumber(json.data?.amount)
   if (!Number.isFinite(amount)) throw new Error('Coinbase spot unavailable')
@@ -43,6 +111,7 @@ async function fetchCoinbaseSpotUsd(assetKey: AssetKey): Promise<number> {
 async function fetchCoinbaseCandles(
   assetKey: AssetKey,
   days: number,
+  signal?: AbortSignal,
 ): Promise<Array<{ t: string; price: number; volume: number }>> {
   const asset = ASSETS[assetKey]
   if (!asset.coinbaseProductId) throw new Error('No product id configured')
@@ -56,8 +125,11 @@ async function fetchCoinbaseCandles(
   url.searchParams.set('start', start.toISOString())
   url.searchParams.set('end', end.toISOString())
 
-  const res = await fetch(url.toString())
-  if (!res.ok) throw new Error('Coinbase candles failed')
+  const res = await fetch(url.toString(), { signal })
+  if (!res.ok) {
+    if (isRateLimitStatus(res.status)) markCoinbaseDown('candles')
+    throw new Error('Coinbase candles failed')
+  }
   const json = (await res.json()) as CoinbaseCandlesResponse
   // API returns newest-first.
   return json
@@ -83,6 +155,40 @@ async function fetchKrakenSpotUsd(assetKey: AssetKey): Promise<number> {
   const n = toNumber(last)
   if (!Number.isFinite(n)) throw new Error('Kraken spot unavailable')
   return n
+}
+
+async function fetchSpotUsdWithFallback(assetKey: AssetKey, signal?: AbortSignal): Promise<number> {
+  const cached = readSpotCache(assetKey)
+  if (cached !== undefined) return cached
+
+  if (!shouldSkipCoinbase('spot')) {
+    try {
+      const v = await fetchCoinbaseSpotUsd(assetKey, signal)
+      if (Number.isFinite(v)) writeSpotCache(assetKey, v)
+      return v
+    } catch {
+      markCoinbaseDown('spot')
+    }
+  }
+
+  const v = await fetchKrakenSpotUsd(assetKey)
+  if (Number.isFinite(v)) writeSpotCache(assetKey, v)
+  return v
+}
+
+async function fetchCandlesWithFallback(
+  assetKey: AssetKey,
+  days: number,
+  signal?: AbortSignal,
+): Promise<Array<{ t: string; price: number; volume: number }>> {
+  if (!shouldSkipCoinbase('candles')) {
+    try {
+      return await fetchCoinbaseCandles(assetKey, days, signal)
+    } catch {
+      markCoinbaseDown('candles')
+    }
+  }
+  return await fetchKrakenCandles(assetKey, days)
 }
 
 async function fetchKrakenCandles(
@@ -119,15 +225,11 @@ async function fetchKrakenCandles(
 export function useSpotUsd(assetKey: AssetKey) {
   return useQuery({
     queryKey: ['market', 'spot', assetKey, 'usd'],
-    queryFn: async () => {
-      try {
-        return await fetchCoinbaseSpotUsd(assetKey)
-      } catch {
-        return await fetchKrakenSpotUsd(assetKey)
-      }
-    },
-    staleTime: 20_000,
-    refetchInterval: 20_000,
+    queryFn: ({ signal }) => fetchSpotUsdWithFallback(assetKey, signal),
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
+    retry: 0,
   })
 }
 
@@ -135,15 +237,11 @@ export function useSpotUsdMany(assetKeys: AssetKey[]) {
   const queries = useQueries({
     queries: assetKeys.map((assetKey) => ({
       queryKey: ['market', 'spot', assetKey, 'usd'],
-      queryFn: async () => {
-        try {
-          return await fetchCoinbaseSpotUsd(assetKey)
-        } catch {
-          return await fetchKrakenSpotUsd(assetKey)
-        }
-      },
-      staleTime: 20_000,
-      refetchInterval: 20_000,
+      queryFn: ({ signal }) => fetchSpotUsdWithFallback(assetKey, signal),
+      staleTime: 60_000,
+      refetchInterval: 60_000,
+      refetchOnWindowFocus: false,
+      retry: 0,
     })),
   })
 
@@ -160,17 +258,13 @@ export function useSpotUsdMany(assetKeys: AssetKey[]) {
   }
 }
 
-export function useCandles7d(assetKey: AssetKey) {
+export function useCandles(assetKey: AssetKey, days: 1 | 7 | 30) {
   return useQuery({
-    queryKey: ['market', 'candles', assetKey, '7d'],
-    queryFn: async () => {
-      try {
-        return await fetchCoinbaseCandles(assetKey, 7)
-      } catch {
-        return await fetchKrakenCandles(assetKey, 7)
-      }
-    },
+    queryKey: ['market', 'candles', assetKey, `${days}d`],
+    queryFn: ({ signal }) => fetchCandlesWithFallback(assetKey, days, signal),
     staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   })
 }
 
@@ -179,11 +273,7 @@ export function useChange24h(assetKey: AssetKey) {
     queryKey: ['market', 'change', assetKey, '24h'],
     queryFn: async () => {
       const points = await (async () => {
-        try {
-          return await fetchCoinbaseCandles(assetKey, 2)
-        } catch {
-          return await fetchKrakenCandles(assetKey, 2)
-        }
+        return await fetchCandlesWithFallback(assetKey, 2)
       })()
       // Approximate: last close vs close ~24h ago.
       if (points.length < 2) throw new Error('Not enough candle data')
@@ -194,6 +284,8 @@ export function useChange24h(assetKey: AssetKey) {
       }
       return ((last - prev) / prev) * 100
     },
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   })
 }
