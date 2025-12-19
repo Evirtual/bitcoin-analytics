@@ -1,5 +1,5 @@
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
 import { useAssetBalances, useUserAssetTotals } from './hooks/useAssetBalances'
@@ -19,18 +19,58 @@ import { ReturnsChartCard } from './components/charts/ReturnsChartCard'
 import { Header } from './components/dashboard/Header'
 import { AccountModal } from './components/wallet/AccountModal'
 import { ConnectWalletModal } from './components/wallet/ConnectWalletModal'
+import { useTheme } from './hooks/useTheme'
 import { usd } from './lib/format'
 import './App.css'
 
+function formatConnectErrorMessage(message: string): string {
+  const m = message.toLowerCase()
+  if (m.includes('wallet_requestpermissions') && m.includes('already pending')) {
+    return 'A wallet connection request is already pending. Open MetaMask and approve it, or wait and try again.'
+  }
+  if (m.includes('already pending')) {
+    return 'A wallet connection request is already pending. Please wait and try again.'
+  }
+  return message
+}
+
 function App() {
+  const { theme, toggleTheme } = useTheme()
   const { address, isConnected, chain } = useAccount()
   const {
     connectors,
     connect,
+    connectAsync,
     isPending: isConnecting,
     error: connectError,
   } = useConnect()
   const { disconnect } = useDisconnect()
+
+  const [connectUiPending, setConnectUiPending] = useState(false)
+
+  const connectDisabled = isConnecting || connectUiPending
+
+  const connectErrorText = useMemo(() => {
+    return connectError?.message ? formatConnectErrorMessage(connectError.message) : undefined
+  }, [connectError])
+
+  const runConnect = useCallback(
+    async (connector: (typeof connectors)[number]) => {
+      if (connectDisabled) return
+
+      setConnectUiPending(true)
+      try {
+        if (connectAsync) {
+          await connectAsync({ connector })
+        } else {
+          connect({ connector })
+        }
+      } finally {
+        setConnectUiPending(false)
+      }
+    },
+    [connect, connectAsync, connectDisabled],
+  )
 
   const chainIds = useMemo<ChainId[]>(() => [1, 8453, 56], [])
 
@@ -132,9 +172,12 @@ function App() {
         chain={chain}
         onOpenConnect={() => setConnectOpen(true)}
         onOpenAccount={() => setAccountOpen(true)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        connectDisabled={connectDisabled}
       />
 
-      {connectError ? <div className="banner error">{connectError.message}</div> : null}
+      {connectErrorText ? <div className="banner error">{connectErrorText}</div> : null}
 
       <div className="toolbar">
         <div className="segmented" role="tablist" aria-label="Asset selector">
@@ -274,9 +317,13 @@ function App() {
                     data={portfolioByAsset.items}
                     margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                   >
-                    <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-                    <XAxis dataKey="assetKey" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} width={72} />
+                    <CartesianGrid stroke="var(--chartGrid)" />
+                    <XAxis dataKey="assetKey" tick={{ fontSize: 12, fill: 'var(--chartTick)' }} />
+                    <YAxis
+                      tick={{ fontSize: 12, fill: 'var(--chartTick)' }}
+                      axisLine={{ stroke: 'var(--chartAxis)' }}
+                      width={72}
+                    />
                     <Tooltip
                       contentStyle={tooltipContentStyle}
                       labelStyle={tooltipLabelStyle}
@@ -301,10 +348,10 @@ function App() {
         open={connectOpen}
         onClose={() => setConnectOpen(false)}
         connectors={connectors}
-        disabled={isConnecting}
+        disabled={connectDisabled}
         onSelectConnector={(c) => {
-          connect({ connector: c })
           setConnectOpen(false)
+          void runConnect(c)
         }}
       />
 
@@ -314,10 +361,10 @@ function App() {
         isConnected={isConnected}
         address={address}
         connectors={connectors}
-        disabled={isConnecting}
+        disabled={connectDisabled}
         onSelectConnector={(c) => {
-          connect({ connector: c })
           setAccountOpen(false)
+          void runConnect(c)
         }}
         gas={{ isLoading: gas.isLoading, data: gas.data }}
         onDisconnect={() => disconnect()}

@@ -10,6 +10,9 @@ export function Header({
   chain,
   onOpenConnect,
   onOpenAccount,
+  theme,
+  onToggleTheme,
+  connectDisabled,
 }: {
   assetKey: AssetKey
   isConnected: boolean
@@ -17,6 +20,9 @@ export function Header({
   chain: Chain | undefined
   onOpenConnect: () => void
   onOpenAccount: () => void
+  theme: 'dark' | 'light'
+  onToggleTheme: () => void
+  connectDisabled: boolean
 }) {
   return (
     <header className="header">
@@ -33,9 +39,19 @@ export function Header({
       </div>
 
       <div className="walletBar">
+        <button
+          className="pill pillBtn"
+          type="button"
+          onClick={onToggleTheme}
+          aria-label="Toggle theme"
+          aria-pressed={theme === 'light'}
+          title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+        >
+          {theme === 'dark' ? 'Light' : 'Dark'}
+        </button>
         {!isConnected ? (
-          <button className="btn btnPrimary" onClick={onOpenConnect}>
-            Connect
+          <button className="btn btnPrimary" onClick={onOpenConnect} disabled={connectDisabled}>
+            {connectDisabled ? 'Connecting…' : 'Connect'}
           </button>
         ) : (
           <button className="pill pillBtn" onClick={onOpenAccount}>

@@ -36,9 +36,9 @@ export function PriceChartCard({
               data={candles}
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             >
-              <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-              <XAxis dataKey="t" tick={{ fontSize: 12 }} minTickGap={48} />
-              <YAxis tick={{ fontSize: 12 }} width={72} />
+              <CartesianGrid stroke="var(--chartGrid)" />
+              <XAxis dataKey="t" tick={{ fontSize: 12, fill: 'var(--chartTick)' }} minTickGap={48} />
+              <YAxis tick={{ fontSize: 12, fill: 'var(--chartTick)' }} axisLine={{ stroke: 'var(--chartAxis)' }} width={72} />
               <Tooltip
                 contentStyle={tooltipContentStyle}
                 labelStyle={tooltipLabelStyle}

@@ -34,9 +34,9 @@ export function VolatilityChartCard({
               data={series}
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             >
-              <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-              <XAxis dataKey="t" tick={{ fontSize: 12 }} minTickGap={64} />
-              <YAxis tick={{ fontSize: 12 }} width={56} />
+              <CartesianGrid stroke="var(--chartGrid)" />
+              <XAxis dataKey="t" tick={{ fontSize: 12, fill: 'var(--chartTick)' }} minTickGap={64} />
+              <YAxis tick={{ fontSize: 12, fill: 'var(--chartTick)' }} axisLine={{ stroke: 'var(--chartAxis)' }} width={56} />
               <Tooltip
                 contentStyle={tooltipContentStyle}
                 labelStyle={tooltipLabelStyle}

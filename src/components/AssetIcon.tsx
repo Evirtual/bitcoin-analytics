@@ -72,7 +72,7 @@ export function AssetIcon(props: {
         </linearGradient>
       </defs>
       <circle cx="16" cy="16" r="14" fill="url(#bg)" />
-      <circle cx="16" cy="16" r="14" stroke="rgba(255,255,255,0.18)" />
+      <circle cx="16" cy="16" r="14" stroke="var(--stroke)" />
 
       {props.assetKey === 'BTC' ? (
         // Original BTC-style mark (not the official logo): stylized B with two vertical strokes.
