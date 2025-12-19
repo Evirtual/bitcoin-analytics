@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Address } from 'viem'
 import type { AssetKey, ChainId } from '../../assets/catalog'
 import { ASSETS } from '../../assets/catalog'
@@ -91,9 +91,11 @@ export function AccountModal<T extends { uid: string; name: string }>({
 }) {
   const [expandedAssetKey, setExpandedAssetKey] = useState<AssetKey | null>(null)
 
-  useEffect(() => {
-    if (!open) setExpandedAssetKey(null)
-  }, [open])
+  // Reset local UI state when closing, without triggering the "setState in effect" lint rule.
+  const handleClose = () => {
+    setExpandedAssetKey(null)
+    onClose()
+  }
 
   const totals = useMemo(() => {
     const rows = assetTotals.data ?? []
@@ -101,7 +103,7 @@ export function AccountModal<T extends { uid: string; name: string }>({
   }, [assetTotals.data])
 
   return (
-    <Modal open={open} title="Account" onClose={onClose}>
+    <Modal open={open} title="Account" onClose={handleClose}>
       {!isConnected ? (
         <div className="stack">
           <div className="muted small">Not connected</div>

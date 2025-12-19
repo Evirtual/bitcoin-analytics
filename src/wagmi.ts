@@ -6,7 +6,10 @@ const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as
   | string
   | undefined
 
-const dappUrl = typeof window !== 'undefined' ? window.location.origin : 'https://evirtual.github.io'
+const dappUrl =
+  typeof globalThis !== 'undefined' && 'location' in globalThis
+    ? (globalThis.location as Location).origin
+    : 'https://evirtual.github.io'
 
 export const wagmiConfig = createConfig({
   chains: [mainnet, base, bsc],
@@ -17,7 +20,7 @@ export const wagmiConfig = createConfig({
         url: dappUrl,
       },
     }),
-    injected({ target: 'rabby' }),
+    injected(),
     ...(walletConnectProjectId
       ? [
           walletConnect({
