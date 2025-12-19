@@ -77,15 +77,23 @@ function ChartFrame({
 
     const update = () => {
       const r = el.getBoundingClientRect()
-      const width = Math.floor(r.width)
-      const height = Math.floor(r.height)
-      setSize({ width: width > 0 ? width : 0, height: height > 0 ? height : 0 })
+      const width = Math.round(r.width)
+      const height = Math.round(r.height)
+      const next = { width: width > 0 ? width : 0, height: height > 0 ? height : 0 }
+      setSize((prev) => (prev.width === next.width && prev.height === next.height ? prev : next))
     }
 
     update()
-    const ro = new ResizeObserver(() => update())
+    let raf = 0
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(update)
+    })
     ro.observe(el)
-    return () => ro.disconnect()
+    return () => {
+      cancelAnimationFrame(raf)
+      ro.disconnect()
+    }
   }, [])
 
   return (

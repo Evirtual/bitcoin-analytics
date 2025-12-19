@@ -210,6 +210,7 @@
   background: linear-gradient(180deg, var(--card), rgba(255, 255, 255, 0.03));
   border-radius: 0.875rem;
   padding: 0.875rem;
+  min-width: 0;
 }
 
 .cardHeader {
@@ -229,6 +230,8 @@
 .chartWrap {
   height: 17.5rem;
   margin-top: 0.75rem;
+  width: 100%;
+  min-width: 0;
 }
 
 .empty {
@@ -267,6 +270,7 @@
 }
 
 .rowTitle {
+  text-align: left;
   font-weight: 700;
 }
 
@@ -427,7 +431,7 @@
 
 .assetLeft {
   display: flex;
-  align-items: center;
+  align-items: left;
   gap: 0.625rem;
   min-width: 0;
 }
