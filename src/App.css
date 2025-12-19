@@ -455,6 +455,81 @@
   gap: 0.5rem;
 }
 
+.assetRowWrap {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.assetRowDetails {
+}
+
+.assetRowRight {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.625rem;
+}
+
+.assetRowChevron {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.625rem;
+  display: grid;
+  place-items: center;
+  border: 0.0625rem solid var(--stroke);
+  background: color-mix(in srgb, var(--card) 50%, var(--card2) 50%);
+  color: var(--textStrong);
+  line-height: 1;
+  font-size: 1.05rem;
+  transform: rotate(0deg);
+  transition: transform 120ms ease;
+}
+
+.assetRowChevronOpen {
+  transform: rotate(180deg);
+}
+
+.assetDetails {
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.75rem;
+}
+
+.assetDetailsHeader {
+  margin-bottom: 0.5rem;
+}
+
+.assetDetailsGrid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.assetDetailsRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.625rem;
+  border: 0.0625rem solid var(--stroke);
+  background: color-mix(in srgb, var(--card) 50%, var(--card2) 50%);
+}
+
+.assetDetailsLeft {
+  min-width: 0;
+}
+
+.assetDetailsChain {
+  font-weight: 700;
+}
+
+.assetDetailsRight {
+  display: grid;
+  justify-items: end;
+  gap: 0.125rem;
+}
+
 .assetRow {
   --rowAccent: var(--accent);
   --rowAccentSoft: var(--accentSoft);

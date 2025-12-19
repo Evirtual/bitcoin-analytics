@@ -317,6 +317,7 @@ function App() {
                     data={portfolioByAsset.items}
                     margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                   >
+            chainIds={chainIds}
                     <CartesianGrid stroke="var(--chartGrid)" />
                     <XAxis dataKey="assetKey" tick={{ fontSize: 12, fill: 'var(--chartTick)' }} />
                     <YAxis
@@ -372,6 +373,7 @@ function App() {
         spotMany={spotMany}
         selectedAssetKey={assetKey}
         onSelectAsset={(k) => setAssetKey(k)}
+        chainIds={chainIds}
         portfolioTotalUsd={portfolioByAsset.totalUsd}
       />
     </div>

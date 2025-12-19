@@ -65,6 +65,7 @@ export async function fetchAssetBalances(address: Address, assetKey: AssetKey, c
   const rows: Array<{
     chainId: ChainId
     chainName: string
+    supported: boolean
     tokenSymbol: string
     amount: number
   }> = []
@@ -75,6 +76,7 @@ export async function fetchAssetBalances(address: Address, assetKey: AssetKey, c
         rows.push({
           chainId,
           chainName: CHAINS.find((c) => c.id === chainId)?.name ?? String(chainId),
+          supported: false,
           tokenSymbol: '—',
           amount: 0,
         })
@@ -88,6 +90,7 @@ export async function fetchAssetBalances(address: Address, assetKey: AssetKey, c
         rows.push({
           chainId,
           chainName: CHAINS.find((c) => c.id === chainId)?.name ?? String(chainId),
+          supported: true,
           tokenSymbol: def.symbol,
           amount: Number.isFinite(amount) ? amount : 0,
         })
@@ -104,22 +107,22 @@ export async function fetchAssetBalances(address: Address, assetKey: AssetKey, c
       rows.push({
         chainId,
         chainName: CHAINS.find((c) => c.id === chainId)?.name ?? String(chainId),
+        supported: true,
         tokenSymbol: def.symbol,
         amount: Number.isFinite(amount) ? amount : 0,
       })
   }
 
-  const byChain = rows
-    .filter((r) => r.tokenSymbol !== '—')
-    .map((r) => ({
-      chainId: r.chainId,
-      chainName: r.chainName,
-      tokenSymbol: r.tokenSymbol,
-      amount: r.amount,
-      formatted: r.amount.toLocaleString(undefined, { maximumFractionDigits: 8 }),
-    }))
+  const byChain = rows.map((r) => ({
+    chainId: r.chainId,
+    chainName: r.chainName,
+    supported: r.supported,
+    tokenSymbol: r.tokenSymbol,
+    amount: r.amount,
+    formatted: r.amount.toLocaleString(undefined, { maximumFractionDigits: 8 }),
+  }))
 
-  const totalAmount = byChain.reduce((acc, r) => acc + r.amount, 0)
+  const totalAmount = byChain.filter((r) => r.supported).reduce((acc, r) => acc + r.amount, 0)
 
   return {
     byChain,

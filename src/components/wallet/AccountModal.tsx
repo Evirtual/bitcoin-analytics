@@ -1,6 +1,8 @@
+import { useEffect, useMemo, useState } from 'react'
 import type { Address } from 'viem'
-import type { AssetKey } from '../../assets/catalog'
+import type { AssetKey, ChainId } from '../../assets/catalog'
 import { ASSETS } from '../../assets/catalog'
+import { useAssetBalances } from '../../hooks/useAssetBalances'
 import { usd } from '../../lib/format'
 import { Modal } from '../Modal'
 import { AssetIcon } from '../AssetIcon'
@@ -9,6 +11,50 @@ import { ConnectorList } from './ConnectorList'
 type GasRow = { chainName: string; formatted: string; symbol: string }
 
 type AssetTotal = { assetKey: AssetKey; totalAmount: number }
+
+function AssetBalanceDetails({
+  address,
+  assetKey,
+  chainIds,
+  priceUsd,
+}: {
+  address: Address
+  assetKey: AssetKey
+  chainIds: ChainId[]
+  priceUsd: number | undefined
+}) {
+  const q = useAssetBalances(address, assetKey, chainIds)
+
+  if (q.isLoading) return <div className="assetDetails muted">Loading network balances…</div>
+  if (!q.data) return <div className="assetDetails muted">Network balances unavailable.</div>
+
+  return (
+    <div className="assetDetails">
+      <div className="assetDetailsHeader muted small">Per network</div>
+      <div className="assetDetailsGrid">
+        {q.data.byChain.map((r) => {
+          const usdValue = priceUsd !== undefined ? priceUsd * r.amount : undefined
+          return (
+            <div key={r.chainId} className="assetDetailsRow">
+              <div className="assetDetailsLeft">
+                <div className="assetDetailsChain">{r.chainName}</div>
+                <div className="assetDetailsMeta muted small">
+                  {r.supported ? r.tokenSymbol : 'Not supported'}
+                </div>
+              </div>
+              <div className="assetDetailsRight">
+                <div className="mono">
+                  {r.supported ? r.formatted : '—'}
+                </div>
+                <div className="muted small">{usdValue !== undefined && r.supported ? usd.format(usdValue) : '—'}</div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 export function AccountModal<T extends { uid: string; name: string }>({
   open,
@@ -24,6 +70,7 @@ export function AccountModal<T extends { uid: string; name: string }>({
   spotMany,
   selectedAssetKey,
   onSelectAsset,
+  chainIds,
   portfolioTotalUsd,
 }: {
   open: boolean
@@ -39,8 +86,20 @@ export function AccountModal<T extends { uid: string; name: string }>({
   spotMany: { isLoading: boolean; data: Map<AssetKey, number> }
   selectedAssetKey: AssetKey
   onSelectAsset: (assetKey: AssetKey) => void
+  chainIds: ChainId[]
   portfolioTotalUsd: number
 }) {
+  const [expandedAssetKey, setExpandedAssetKey] = useState<AssetKey | null>(null)
+
+  useEffect(() => {
+    if (!open) setExpandedAssetKey(null)
+  }, [open])
+
+  const totals = useMemo(() => {
+    const rows = assetTotals.data ?? []
+    return rows.filter((a) => a.totalAmount > 0)
+  }, [assetTotals.data])
+
   return (
     <Modal open={open} title="Account" onClose={onClose}>
       {!isConnected ? (
@@ -75,23 +134,32 @@ export function AccountModal<T extends { uid: string; name: string }>({
           <div className="assetList">
             {assetTotals.isLoading || spotMany.isLoading ? (
               <div className="muted">Loading…</div>
-            ) : assetTotals.data?.some((a) => a.totalAmount > 0) ? (
-              assetTotals.data
-                .filter((a) => a.totalAmount > 0)
-                .map((a) => {
-                  const price = spotMany.data.get(a.assetKey)
-                  const v = price !== undefined ? price * a.totalAmount : undefined
-                  return (
+            ) : totals.length ? (
+              totals.map((a) => {
+                const price = spotMany.data.get(a.assetKey)
+                const v = price !== undefined ? price * a.totalAmount : undefined
+                const expanded = expandedAssetKey === a.assetKey
+                const detailsId = `asset-details-${a.assetKey}`
+                return (
+                  <div
+                    key={a.assetKey}
+                    className="assetRowWrap"
+                    style={
+                      {
+                        ['--rowAccent' as unknown as string]: ASSETS[a.assetKey].accent,
+                        ['--rowAccentSoft' as unknown as string]: ASSETS[a.assetKey].accentSoft,
+                      } as React.CSSProperties
+                    }
+                  >
                     <button
-                      key={a.assetKey}
                       className={a.assetKey === selectedAssetKey ? 'assetRow assetRowActive' : 'assetRow'}
-                      onClick={() => onSelectAsset(a.assetKey)}
-                      style={
-                        {
-                          ['--rowAccent' as unknown as string]: ASSETS[a.assetKey].accent,
-                          ['--rowAccentSoft' as unknown as string]: ASSETS[a.assetKey].accentSoft,
-                        } as React.CSSProperties
-                      }
+                      onClick={() => {
+                        onSelectAsset(a.assetKey)
+                        setExpandedAssetKey((prev) => (prev === a.assetKey ? null : a.assetKey))
+                      }}
+                      type="button"
+                      aria-expanded={expanded}
+                      aria-controls={detailsId}
                     >
                       <div className="assetLeft">
                         <AssetIcon assetKey={a.assetKey} size={24} className="assetRowIcon" />
@@ -100,15 +168,32 @@ export function AccountModal<T extends { uid: string; name: string }>({
                           <div className="rowSub muted">{ASSETS[a.assetKey].label}</div>
                         </div>
                       </div>
-                      <div className="rightStack">
-                        <div className="mono">
-                          {a.totalAmount.toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                      <div className="assetRowRight">
+                        <div className="rightStack">
+                          <div className="mono">
+                            {a.totalAmount.toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                          </div>
+                          <div className="rowSub muted">{v !== undefined ? usd.format(v) : '—'}</div>
                         </div>
-                        <div className="rowSub muted">{v !== undefined ? usd.format(v) : '—'}</div>
+                        <div className={expanded ? 'assetRowChevron assetRowChevronOpen' : 'assetRowChevron'} aria-hidden="true">
+                          ▾
+                        </div>
                       </div>
                     </button>
-                  )
-                })
+
+                    {expanded && address ? (
+                      <div id={detailsId} className="assetRowDetails">
+                        <AssetBalanceDetails
+                          address={address}
+                          assetKey={a.assetKey}
+                          chainIds={chainIds}
+                          priceUsd={price}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })
             ) : (
               <div className="muted">No supported assets detected.</div>
             )}
