@@ -5,7 +5,6 @@ import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
 import { useAssetBalances, useUserAssetTotals } from './hooks/useAssetBalances'
 import { useCandles, useChange24h, useSpotUsd, useSpotUsdMany } from './hooks/useMarket'
 import { useGasBalances } from './hooks/useGasBalances'
-import { Modal } from './components/Modal'
 import { AssetIcon } from './components/AssetIcon'
 import type { CandleRange } from './components/charts/types'
 import { ChartFrame } from './components/charts/ChartFrame'
@@ -17,19 +16,11 @@ import { VolumeChartCard } from './components/charts/VolumeChartCard'
 import { DrawdownChartCard } from './components/charts/DrawdownChartCard'
 import { VolatilityChartCard } from './components/charts/VolatilityChartCard'
 import { ReturnsChartCard } from './components/charts/ReturnsChartCard'
+import { Header } from './components/dashboard/Header'
+import { AccountModal } from './components/wallet/AccountModal'
+import { ConnectWalletModal } from './components/wallet/ConnectWalletModal'
 import { usd } from './lib/format'
 import './App.css'
-
-function connectorInitials(name: string): string {
-  const cleaned = name
-    .replace(/\(.*?\)/g, ' ')
-    .replace(/[^a-zA-Z0-9 ]/g, ' ')
-    .trim()
-  if (!cleaned) return 'W'
-  const parts = cleaned.split(/\s+/).filter(Boolean)
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase()
-  return (parts[0]!.slice(0, 1) + parts[1]!.slice(0, 1)).toUpperCase()
-}
 
 function App() {
   const { address, isConnected, chain } = useAccount()
@@ -134,34 +125,14 @@ function App() {
         } as React.CSSProperties
       }
     >
-      <header className="header">
-        <div className="brand">
-          <div className="brandRow">
-            <AssetIcon assetKey={assetKey} size={46} className="logoMark" />
-            <div>
-              <div className="title">
-                <span className="titleAccent">{ASSETS[assetKey].label}</span> Analytics
-              </div>
-              <div className="subtitle">Market stats + multichain wallet balances</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="walletBar">
-          {!isConnected ? (
-            <button className="btn btnPrimary" onClick={() => setConnectOpen(true)}>
-              Connect
-            </button>
-          ) : (
-            <>
-              <button className="pill pillBtn" onClick={() => setAccountOpen(true)}>
-                {address?.slice(0, 6)}…{address?.slice(-4)}
-                {chain?.name ? ` • ${chain.name}` : ''}
-              </button>
-            </>
-          )}
-        </div>
-      </header>
+      <Header
+        assetKey={assetKey}
+        isConnected={isConnected}
+        address={address}
+        chain={chain}
+        onOpenConnect={() => setConnectOpen(true)}
+        onOpenAccount={() => setAccountOpen(true)}
+      />
 
       {connectError ? <div className="banner error">{connectError.message}</div> : null}
 
@@ -326,130 +297,36 @@ function App() {
         ) : null}
       </section>
 
-      <Modal open={connectOpen} title="Connect Wallet" onClose={() => setConnectOpen(false)}>
-        <div className="stack">
-          {connectors.map((c) => (
-            <button
-              key={c.uid}
-              className="connectRow"
-              onClick={() => {
-                connect({ connector: c })
-                setConnectOpen(false)
-              }}
-              disabled={isConnecting}
-            >
-              <div className="connectLeft">
-                <div className="connectIcon" aria-hidden="true">
-                  {connectorInitials(c.name)}
-                </div>
-                <div className="connectName">{c.name}</div>
-              </div>
-              <div className="muted small">Select</div>
-            </button>
-          ))}
-        </div>
-      </Modal>
+      <ConnectWalletModal
+        open={connectOpen}
+        onClose={() => setConnectOpen(false)}
+        connectors={connectors}
+        disabled={isConnecting}
+        onSelectConnector={(c) => {
+          connect({ connector: c })
+          setConnectOpen(false)
+        }}
+      />
 
-      <Modal open={accountOpen} title="Account" onClose={() => setAccountOpen(false)}>
-        {!isConnected ? (
-          <div className="stack">
-            <div className="muted small">Not connected</div>
-            <div className="stack">
-              {connectors.map((c) => (
-                <button
-                  key={c.uid}
-                  className="connectRow"
-                  onClick={() => {
-                    connect({ connector: c })
-                    setAccountOpen(false)
-                  }}
-                  disabled={isConnecting}
-                >
-                  <div className="connectLeft">
-                    <div className="connectIcon" aria-hidden="true">
-                      {connectorInitials(c.name)}
-                    </div>
-                    <div className="connectName">{c.name}</div>
-                  </div>
-                  <div className="muted small">Select</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="stack">
-            <div className="accountTop">
-              <div>
-                <div className="muted small">Address</div>
-                <div className="mono">{address}</div>
-                <div className="muted small" style={{ marginTop: '0.375em' }}>
-                  Gas:{' '}
-                  {gas.isLoading
-                    ? 'Loading…'
-                    : gas.data
-                      ? gas.data
-                          .map((g) => `${g.chainName} ${g.formatted} ${g.symbol}`)
-                          .join(' • ')
-                      : 'Unavailable'}
-                </div>
-              </div>
-              <button className="btn" onClick={() => disconnect()}>
-                Disconnect
-              </button>
-            </div>
-
-            <div className="divider" />
-
-            <div className="muted small">Balances (supported assets)</div>
-
-            <div className="assetList">
-              {assetTotals.isLoading || spotMany.isLoading ? (
-                <div className="muted">Loading…</div>
-              ) : assetTotals.data?.some((a) => a.totalAmount > 0) ? (
-                assetTotals.data
-                  .filter((a) => a.totalAmount > 0)
-                  .map((a) => {
-                  const price = spotMany.data.get(a.assetKey)
-                  const v = price !== undefined ? price * a.totalAmount : undefined
-                  return (
-                  <button
-                    key={a.assetKey}
-                    className={a.assetKey === assetKey ? 'assetRow assetRowActive' : 'assetRow'}
-                    onClick={() => setAssetKey(a.assetKey)}
-                    style={
-                      {
-                        ['--rowAccent' as unknown as string]: ASSETS[a.assetKey].accent,
-                        ['--rowAccentSoft' as unknown as string]: ASSETS[a.assetKey].accentSoft,
-                      } as React.CSSProperties
-                    }
-                  >
-                    <div className="assetLeft">
-                      <AssetIcon assetKey={a.assetKey} size={24} className="assetRowIcon" />
-                      <div>
-                        <div className="rowTitle">{a.assetKey}</div>
-                        <div className="rowSub muted">{ASSETS[a.assetKey].label}</div>
-                      </div>
-                    </div>
-                    <div className="rightStack">
-                      <div className="mono">{a.totalAmount.toLocaleString(undefined, { maximumFractionDigits: 8 })}</div>
-                      <div className="rowSub muted">
-                        {v !== undefined ? usd.format(v) : '—'}
-                      </div>
-                    </div>
-                  </button>
-                  )
-                })
-              ) : (
-                <div className="muted">No supported assets detected.</div>
-              )}
-            </div>
-
-            <div className="footnote">
-              Portfolio total ≈ {usd.format(portfolioByAsset.totalUsd)}
-            </div>
-          </div>
-        )}
-      </Modal>
+      <AccountModal
+        open={accountOpen}
+        onClose={() => setAccountOpen(false)}
+        isConnected={isConnected}
+        address={address}
+        connectors={connectors}
+        disabled={isConnecting}
+        onSelectConnector={(c) => {
+          connect({ connector: c })
+          setAccountOpen(false)
+        }}
+        gas={{ isLoading: gas.isLoading, data: gas.data }}
+        onDisconnect={() => disconnect()}
+        assetTotals={{ isLoading: assetTotals.isLoading, data: assetTotals.data }}
+        spotMany={spotMany}
+        selectedAssetKey={assetKey}
+        onSelectAsset={(k) => setAssetKey(k)}
+        portfolioTotalUsd={portfolioByAsset.totalUsd}
+      />
     </div>
   )
 }
