@@ -3,11 +3,35 @@ import { createPublicClient, formatUnits, http, type Address } from 'viem'
 import { base, bsc, mainnet } from 'viem/chains'
 import { ASSETS, CHAINS, type AssetKey, type ChainId } from '../assets/catalog'
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function readStatus(value: unknown): number | undefined {
+  if (!isRecord(value)) return undefined
+  const raw = value.status
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw
+  if (typeof raw === 'string') {
+    const n = Number(raw)
+    if (Number.isFinite(n)) return n
+  }
+  return undefined
+}
+
+function readMessage(value: unknown): string {
+  if (value instanceof Error) return value.message
+  if (!isRecord(value)) return ''
+  const raw = value.message
+  return typeof raw === 'string' ? raw : ''
+}
+
 function isRateLimitError(err: unknown): boolean {
-  const e = err as any
-  const status = e?.status ?? e?.cause?.status ?? e?.response?.status
+  const status =
+    readStatus(err) ??
+    (isRecord(err) ? readStatus(err.cause) : undefined) ??
+    (isRecord(err) ? readStatus(err.response) : undefined)
   if (status === 429) return true
-  const msg = String(e?.message ?? '')
+  const msg = readMessage(err)
   return msg.includes('429') || msg.toLowerCase().includes('rate limit')
 }
 

@@ -48,6 +48,20 @@ const tooltipItemStyle: React.CSSProperties = {
   padding: 0,
 }
 
+function stdev(values: number[]) {
+  const n = values.length
+  if (n <= 1) return 0
+  let sum = 0
+  for (const v of values) sum += v
+  const mean = sum / n
+  let ss = 0
+  for (const v of values) {
+    const d = v - mean
+    ss += d * d
+  }
+  return Math.sqrt(ss / (n - 1))
+}
+
 function connectorInitials(name: string): string {
   const cleaned = name
     .replace(/\(.*?\)/g, ' ')
@@ -157,15 +171,21 @@ function App() {
   const [priceRange, setPriceRange] = useState<CandleRange>('1W')
   const [volumeRange, setVolumeRange] = useState<CandleRange>('1W')
   const [returnsRange, setReturnsRange] = useState<CandleRange>('1W')
+  const [drawdownRange, setDrawdownRange] = useState<CandleRange>('1W')
+  const [volRange, setVolRange] = useState<CandleRange>('1W')
   const [portfolioRange, setPortfolioRange] = useState<CandleRange>('1W')
 
   const priceDays = useMemo(() => rangeToDays(priceRange) as 1 | 7 | 30, [priceRange])
   const volumeDays = useMemo(() => rangeToDays(volumeRange) as 1 | 7 | 30, [volumeRange])
   const returnsDays = useMemo(() => rangeToDays(returnsRange) as 1 | 7 | 30, [returnsRange])
+  const drawdownDays = useMemo(() => rangeToDays(drawdownRange) as 1 | 7 | 30, [drawdownRange])
+  const volDays = useMemo(() => rangeToDays(volRange) as 1 | 7 | 30, [volRange])
 
   const priceCandles = useCandles(assetKey, priceDays)
   const volumeCandles = useCandles(assetKey, volumeDays)
   const returnsCandles = useCandles(assetKey, returnsDays)
+  const drawdownCandles = useCandles(assetKey, drawdownDays)
+  const volCandles = useCandles(assetKey, volDays)
 
   const balances = useAssetBalances(address, assetKey, chainIds)
   const gas = useGasBalances(address, chainIds)
@@ -208,6 +228,52 @@ function App() {
       return { day, ret: Number.isFinite(r) ? r : 0 }
     })
   }, [returnsCandles.data])
+
+  const drawdownSeries = useMemo(() => {
+    const pts = drawdownCandles.data ?? []
+    return pts.reduce(
+      (acc, p) => {
+        const price = p.price
+        const nextPeak = Number.isFinite(price) ? Math.max(acc.peak, price) : acc.peak
+        const dd = nextPeak > 0 && Number.isFinite(price) ? ((price - nextPeak) / nextPeak) * 100 : 0
+        return {
+          peak: nextPeak,
+          out: acc.out.concat({ t: p.t, dd: Number.isFinite(dd) ? dd : 0 }),
+        }
+      },
+      { peak: -Infinity, out: [] as Array<{ t: string; dd: number }> },
+    ).out
+  }, [drawdownCandles.data])
+
+  const rollingVolSeries = useMemo(() => {
+    // Annualized realized vol computed from hourly returns.
+    // This makes 1D/1W/1M behave consistently and avoids empty series when
+    // the selected range doesn't contain enough full daily buckets.
+    const pts = volCandles.data ?? []
+    if (pts.length < 3) return []
+
+    const windowHours = volRange === '1D' ? 6 : volRange === '1W' ? 24 : 24 * 7
+    const periodsPerYear = 365 * 24
+
+    const out: Array<{ t: string; vol: number }> = []
+    const returns: number[] = []
+
+    for (let i = 1; i < pts.length; i++) {
+      const prev = pts[i - 1]!.price
+      const cur = pts[i]!.price
+      const r = prev > 0 && Number.isFinite(prev) && Number.isFinite(cur) ? (cur - prev) / prev : NaN
+      returns.push(r)
+
+      if (returns.length < windowHours) continue
+      const slice = returns
+        .slice(returns.length - windowHours)
+        .filter((n) => Number.isFinite(n))
+      const vol = slice.length >= 2 ? stdev(slice) * Math.sqrt(periodsPerYear) * 100 : 0
+      out.push({ t: pts[i]!.t, vol: Number.isFinite(vol) ? vol : 0 })
+    }
+
+    return out
+  }, [volCandles.data, volRange])
 
   const range7d = useMemo(() => {
     const pts = priceCandles.data ?? []
@@ -435,6 +501,98 @@ function App() {
               <div className="empty">
                 {volumeCandles.isLoading ? 'Loading chart…' : 'Chart unavailable'}
               </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="grid2">
+        <div className="card">
+          <div className="cardHeader">
+            <h2>
+              {assetKey} Drawdown ({drawdownRange})
+            </h2>
+            <RangeToggle value={drawdownRange} onChange={setDrawdownRange} />
+          </div>
+
+          {drawdownSeries.length ? (
+            <ChartFrame fallback={<div className="empty">Loading chart…</div>}>
+              {({ width, height }) => (
+                <AreaChart
+                  width={width}
+                  height={height}
+                  data={drawdownSeries}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid stroke="rgba(255,255,255,0.08)" />
+                  <XAxis dataKey="t" tick={{ fontSize: 12 }} minTickGap={64} />
+                  <YAxis tick={{ fontSize: 12 }} width={56} />
+                  <Tooltip
+                    contentStyle={tooltipContentStyle}
+                    labelStyle={tooltipLabelStyle}
+                    itemStyle={tooltipItemStyle}
+                    formatter={(value) => {
+                      const n = Number(value)
+                      return [Number.isFinite(n) ? `${n.toFixed(2)}%` : String(value), 'Drawdown']
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="dd"
+                    stroke="var(--accent)"
+                    fill="var(--accent)"
+                    fillOpacity={0.18}
+                  />
+                </AreaChart>
+              )}
+            </ChartFrame>
+          ) : (
+            <div className="chartWrap">
+              <div className="empty">{drawdownCandles.isLoading ? 'Loading chart…' : 'Chart unavailable'}</div>
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="cardHeader">
+            <h2>Rolling Volatility ({volRange})</h2>
+            <RangeToggle value={volRange} onChange={setVolRange} />
+          </div>
+
+          {rollingVolSeries.length ? (
+            <ChartFrame fallback={<div className="empty">Loading chart…</div>}>
+              {({ width, height }) => (
+                <AreaChart
+                  width={width}
+                  height={height}
+                  data={rollingVolSeries}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid stroke="rgba(255,255,255,0.08)" />
+                  <XAxis dataKey="t" tick={{ fontSize: 12 }} minTickGap={64} />
+                  <YAxis tick={{ fontSize: 12 }} width={56} />
+                  <Tooltip
+                    contentStyle={tooltipContentStyle}
+                    labelStyle={tooltipLabelStyle}
+                    itemStyle={tooltipItemStyle}
+                    formatter={(value) => {
+                      const n = Number(value)
+                      return [Number.isFinite(n) ? `${n.toFixed(2)}%` : String(value), 'Vol']
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="vol"
+                    stroke="var(--accent)"
+                    fill="var(--accent)"
+                    fillOpacity={0.18}
+                  />
+                </AreaChart>
+              )}
+            </ChartFrame>
+          ) : (
+            <div className="chartWrap">
+              <div className="empty">{volCandles.isLoading ? 'Loading chart…' : 'Data unavailable'}</div>
             </div>
           )}
         </div>
