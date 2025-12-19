@@ -1,14 +1,5 @@
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts'
+import { useMemo, useState } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
 import { useAssetBalances, useUserAssetTotals } from './hooks/useAssetBalances'
@@ -16,51 +7,18 @@ import { useCandles, useChange24h, useSpotUsd, useSpotUsdMany } from './hooks/us
 import { useGasBalances } from './hooks/useGasBalances'
 import { Modal } from './components/Modal'
 import { AssetIcon } from './components/AssetIcon'
+import type { CandleRange } from './components/charts/types'
+import { ChartFrame } from './components/charts/ChartFrame'
+import { RangeToggle } from './components/charts/range'
+import { rangeToDays } from './components/charts/rangeUtils'
+import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './components/charts/chartTheme'
+import { PriceChartCard } from './components/charts/PriceChartCard'
+import { VolumeChartCard } from './components/charts/VolumeChartCard'
+import { DrawdownChartCard } from './components/charts/DrawdownChartCard'
+import { VolatilityChartCard } from './components/charts/VolatilityChartCard'
+import { ReturnsChartCard } from './components/charts/ReturnsChartCard'
+import { usd } from './lib/format'
 import './App.css'
-
-const usd = new Intl.NumberFormat(undefined, {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 2,
-})
-
-const compact = new Intl.NumberFormat(undefined, {
-  notation: 'compact',
-  maximumFractionDigits: 2,
-})
-
-const tooltipContentStyle: React.CSSProperties = {
-  background: 'rgba(10, 12, 22, 0.92)',
-  border: '0.0625em solid rgba(255, 255, 255, 0.14)',
-  borderRadius: '0.75em',
-  padding: '0.625em 0.75em',
-  boxShadow: '0 0.875em 2.5em rgba(0,0,0,0.55)',
-  color: 'rgba(255,255,255,0.92)',
-}
-
-const tooltipLabelStyle: React.CSSProperties = {
-  color: 'rgba(255,255,255,0.62)',
-  marginBottom: '0.375em',
-}
-
-const tooltipItemStyle: React.CSSProperties = {
-  color: 'rgba(255,255,255,0.92)',
-  padding: 0,
-}
-
-function stdev(values: number[]) {
-  const n = values.length
-  if (n <= 1) return 0
-  let sum = 0
-  for (const v of values) sum += v
-  const mean = sum / n
-  let ss = 0
-  for (const v of values) {
-    const d = v - mean
-    ss += d * d
-  }
-  return Math.sqrt(ss / (n - 1))
-}
 
 function connectorInitials(name: string): string {
   const cleaned = name
@@ -71,75 +29,6 @@ function connectorInitials(name: string): string {
   const parts = cleaned.split(/\s+/).filter(Boolean)
   if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase()
   return (parts[0]!.slice(0, 1) + parts[1]!.slice(0, 1)).toUpperCase()
-}
-
-function ChartFrame({
-  style,
-  fallback,
-  children,
-}: {
-  style?: React.CSSProperties
-  fallback: React.ReactNode
-  children: (size: { width: number; height: number }) => React.ReactNode
-}) {
-  const ref = useRef<HTMLDivElement | null>(null)
-  const [size, setSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-
-    const update = () => {
-      const r = el.getBoundingClientRect()
-      const width = Math.round(r.width)
-      const height = Math.round(r.height)
-      const next = { width: width > 0 ? width : 0, height: height > 0 ? height : 0 }
-      setSize((prev) => (prev.width === next.width && prev.height === next.height ? prev : next))
-    }
-
-    update()
-    let raf = 0
-    const ro = new ResizeObserver(() => {
-      cancelAnimationFrame(raf)
-      raf = requestAnimationFrame(update)
-    })
-    ro.observe(el)
-    return () => {
-      cancelAnimationFrame(raf)
-      ro.disconnect()
-    }
-  }, [])
-
-  return (
-    <div ref={ref} className="chartWrap" style={style}>
-      {size.width > 0 && size.height > 0 ? children(size) : fallback}
-    </div>
-  )
-}
-
-type CandleRange = '1D' | '1W' | '1M'
-
-function rangeToDays(r: CandleRange) {
-  if (r === '1D') return 1
-  if (r === '1M') return 30
-  return 7
-}
-
-function RangeToggle({ value, onChange }: { value: CandleRange; onChange: (v: CandleRange) => void }) {
-  return (
-    <div className="segmented" aria-label="Candle range">
-      {(['1D', '1W', '1M'] as const).map((r) => (
-        <button
-          key={r}
-          className={r === value ? 'segBtn segBtnActive' : 'segBtn'}
-          type="button"
-          onClick={() => onChange(r)}
-        >
-          <span className="segLabel">{r}</span>
-        </button>
-      ))}
-    </div>
-  )
 }
 
 function App() {
@@ -211,69 +100,6 @@ function App() {
 
   const [connectOpen, setConnectOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
-
-  const dailyReturns = useMemo(() => {
-    const points = returnsCandles.data ?? []
-    const dayMap = new Map<string, { first?: number; last?: number }>()
-    for (const p of points) {
-      // p.t is localized string; group by date portion
-      const day = p.t.split(',')[0] ?? p.t
-      const cur = dayMap.get(day) ?? {}
-      if (cur.first === undefined) cur.first = p.price
-      cur.last = p.price
-      dayMap.set(day, cur)
-    }
-    return Array.from(dayMap.entries()).map(([day, v]) => {
-      const r = v.first && v.last ? ((v.last - v.first) / v.first) * 100 : 0
-      return { day, ret: Number.isFinite(r) ? r : 0 }
-    })
-  }, [returnsCandles.data])
-
-  const drawdownSeries = useMemo(() => {
-    const pts = drawdownCandles.data ?? []
-    return pts.reduce(
-      (acc, p) => {
-        const price = p.price
-        const nextPeak = Number.isFinite(price) ? Math.max(acc.peak, price) : acc.peak
-        const dd = nextPeak > 0 && Number.isFinite(price) ? ((price - nextPeak) / nextPeak) * 100 : 0
-        return {
-          peak: nextPeak,
-          out: acc.out.concat({ t: p.t, dd: Number.isFinite(dd) ? dd : 0 }),
-        }
-      },
-      { peak: -Infinity, out: [] as Array<{ t: string; dd: number }> },
-    ).out
-  }, [drawdownCandles.data])
-
-  const rollingVolSeries = useMemo(() => {
-    // Annualized realized vol computed from hourly returns.
-    // This makes 1D/1W/1M behave consistently and avoids empty series when
-    // the selected range doesn't contain enough full daily buckets.
-    const pts = volCandles.data ?? []
-    if (pts.length < 3) return []
-
-    const windowHours = volRange === '1D' ? 6 : volRange === '1W' ? 24 : 24 * 7
-    const periodsPerYear = 365 * 24
-
-    const out: Array<{ t: string; vol: number }> = []
-    const returns: number[] = []
-
-    for (let i = 1; i < pts.length; i++) {
-      const prev = pts[i - 1]!.price
-      const cur = pts[i]!.price
-      const r = prev > 0 && Number.isFinite(prev) && Number.isFinite(cur) ? (cur - prev) / prev : NaN
-      returns.push(r)
-
-      if (returns.length < windowHours) continue
-      const slice = returns
-        .slice(returns.length - windowHours)
-        .filter((n) => Number.isFinite(n))
-      const vol = slice.length >= 2 ? stdev(slice) * Math.sqrt(periodsPerYear) * 100 : 0
-      out.push({ t: pts[i]!.t, vol: Number.isFinite(vol) ? vol : 0 })
-    }
-
-    return out
-  }, [volCandles.data, volRange])
 
   const range7d = useMemo(() => {
     const pts = priceCandles.data ?? []
@@ -415,227 +241,45 @@ function App() {
       </div>
 
       <section className="grid2">
-        <div className="card">
-          <div className="cardHeader">
-            <h2>
-              {assetKey} Price ({priceRange})
-            </h2>
-            <RangeToggle value={priceRange} onChange={setPriceRange} />
-          </div>
-
-          {priceCandles.data ? (
-            <ChartFrame fallback={<div className="empty">Loading chart…</div>}>
-              {({ width, height }) => (
-                <AreaChart
-                  width={width}
-                  height={height}
-                  data={priceCandles.data}
-                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-                  <XAxis dataKey="t" tick={{ fontSize: 12 }} minTickGap={48} />
-                  <YAxis tick={{ fontSize: 12 }} width={72} />
-                  <Tooltip
-                    contentStyle={tooltipContentStyle}
-                    labelStyle={tooltipLabelStyle}
-                    itemStyle={tooltipItemStyle}
-                    formatter={(value) => {
-                      const n = Number(value)
-                      return [Number.isFinite(n) ? usd.format(n) : String(value), 'Price']
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="price"
-                    stroke="var(--accent)"
-                    fill="var(--accent)"
-                    fillOpacity={0.18}
-                  />
-                </AreaChart>
-              )}
-            </ChartFrame>
-          ) : (
-            <div className="chartWrap">
-              <div className="empty">
-                {priceCandles.isLoading ? 'Loading chart…' : 'Chart unavailable'}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="card">
-          <div className="cardHeader">
-            <h2>
-              {assetKey} Volume ({volumeRange})
-            </h2>
-            <RangeToggle value={volumeRange} onChange={setVolumeRange} />
-          </div>
-
-          {volumeCandles.data ? (
-            <ChartFrame fallback={<div className="empty">Loading chart…</div>}>
-              {({ width, height }) => (
-                <BarChart
-                  width={width}
-                  height={height}
-                  data={volumeCandles.data}
-                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-                  <XAxis dataKey="t" tick={{ fontSize: 12 }} minTickGap={64} />
-                  <YAxis tick={{ fontSize: 12 }} width={72} />
-                  <Tooltip
-                    contentStyle={tooltipContentStyle}
-                    labelStyle={tooltipLabelStyle}
-                    itemStyle={tooltipItemStyle}
-                    formatter={(value) => {
-                      const n = Number(value)
-                      return [Number.isFinite(n) ? compact.format(n) : String(value), 'Volume']
-                    }}
-                  />
-                  <Bar dataKey="volume" fill="var(--accent)" opacity={0.65} />
-                </BarChart>
-              )}
-            </ChartFrame>
-          ) : (
-            <div className="chartWrap">
-              <div className="empty">
-                {volumeCandles.isLoading ? 'Loading chart…' : 'Chart unavailable'}
-              </div>
-            </div>
-          )}
-        </div>
+        <PriceChartCard
+          assetKey={assetKey}
+          range={priceRange}
+          onRangeChange={setPriceRange}
+          candles={priceCandles.data}
+          isLoading={priceCandles.isLoading}
+        />
+        <VolumeChartCard
+          assetKey={assetKey}
+          range={volumeRange}
+          onRangeChange={setVolumeRange}
+          candles={volumeCandles.data}
+          isLoading={volumeCandles.isLoading}
+        />
       </section>
 
       <section className="grid2">
-        <div className="card">
-          <div className="cardHeader">
-            <h2>
-              {assetKey} Drawdown ({drawdownRange})
-            </h2>
-            <RangeToggle value={drawdownRange} onChange={setDrawdownRange} />
-          </div>
-
-          {drawdownSeries.length ? (
-            <ChartFrame fallback={<div className="empty">Loading chart…</div>}>
-              {({ width, height }) => (
-                <AreaChart
-                  width={width}
-                  height={height}
-                  data={drawdownSeries}
-                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-                  <XAxis dataKey="t" tick={{ fontSize: 12 }} minTickGap={64} />
-                  <YAxis tick={{ fontSize: 12 }} width={56} />
-                  <Tooltip
-                    contentStyle={tooltipContentStyle}
-                    labelStyle={tooltipLabelStyle}
-                    itemStyle={tooltipItemStyle}
-                    formatter={(value) => {
-                      const n = Number(value)
-                      return [Number.isFinite(n) ? `${n.toFixed(2)}%` : String(value), 'Drawdown']
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="dd"
-                    stroke="var(--accent)"
-                    fill="var(--accent)"
-                    fillOpacity={0.18}
-                  />
-                </AreaChart>
-              )}
-            </ChartFrame>
-          ) : (
-            <div className="chartWrap">
-              <div className="empty">{drawdownCandles.isLoading ? 'Loading chart…' : 'Chart unavailable'}</div>
-            </div>
-          )}
-        </div>
-
-        <div className="card">
-          <div className="cardHeader">
-            <h2>Rolling Volatility ({volRange})</h2>
-            <RangeToggle value={volRange} onChange={setVolRange} />
-          </div>
-
-          {rollingVolSeries.length ? (
-            <ChartFrame fallback={<div className="empty">Loading chart…</div>}>
-              {({ width, height }) => (
-                <AreaChart
-                  width={width}
-                  height={height}
-                  data={rollingVolSeries}
-                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-                  <XAxis dataKey="t" tick={{ fontSize: 12 }} minTickGap={64} />
-                  <YAxis tick={{ fontSize: 12 }} width={56} />
-                  <Tooltip
-                    contentStyle={tooltipContentStyle}
-                    labelStyle={tooltipLabelStyle}
-                    itemStyle={tooltipItemStyle}
-                    formatter={(value) => {
-                      const n = Number(value)
-                      return [Number.isFinite(n) ? `${n.toFixed(2)}%` : String(value), 'Vol']
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="vol"
-                    stroke="var(--accent)"
-                    fill="var(--accent)"
-                    fillOpacity={0.18}
-                  />
-                </AreaChart>
-              )}
-            </ChartFrame>
-          ) : (
-            <div className="chartWrap">
-              <div className="empty">{volCandles.isLoading ? 'Loading chart…' : 'Data unavailable'}</div>
-            </div>
-          )}
-        </div>
+        <DrawdownChartCard
+          assetKey={assetKey}
+          range={drawdownRange}
+          onRangeChange={setDrawdownRange}
+          candles={drawdownCandles.data}
+          isLoading={drawdownCandles.isLoading}
+        />
+        <VolatilityChartCard
+          range={volRange}
+          onRangeChange={setVolRange}
+          candles={volCandles.data}
+          isLoading={volCandles.isLoading}
+        />
       </section>
 
       <section className="grid1">
-        <div className="card">
-          <div className="cardHeader">
-            <h2>Daily Returns ({returnsRange})</h2>
-            <RangeToggle value={returnsRange} onChange={setReturnsRange} />
-          </div>
-
-          {dailyReturns.length ? (
-            <ChartFrame style={{ height: '16.25em' }} fallback={<div className="empty">Loading…</div>}>
-              {({ width, height }) => (
-                <BarChart
-                  width={width}
-                  height={height}
-                  data={dailyReturns}
-                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-                  <XAxis dataKey="day" tick={{ fontSize: 12 }} minTickGap={24} />
-                  <YAxis tick={{ fontSize: 12 }} width={56} />
-                  <Tooltip
-                    contentStyle={tooltipContentStyle}
-                    labelStyle={tooltipLabelStyle}
-                    itemStyle={tooltipItemStyle}
-                    formatter={(value) => {
-                      const n = Number(value)
-                      return [Number.isFinite(n) ? `${n.toFixed(2)}%` : String(value), 'Return']
-                    }}
-                  />
-                  <Bar dataKey="ret" fill="var(--accent)" opacity={0.72} />
-                </BarChart>
-              )}
-            </ChartFrame>
-          ) : (
-            <div className="chartWrap">
-              <div className="empty">{returnsCandles.isLoading ? 'Loading…' : 'Data unavailable'}</div>
-            </div>
-          )}
-        </div>
+        <ReturnsChartCard
+          range={returnsRange}
+          onRangeChange={setReturnsRange}
+          candles={returnsCandles.data}
+          isLoading={returnsCandles.isLoading}
+        />
       </section>
 
       <section className="grid1">
