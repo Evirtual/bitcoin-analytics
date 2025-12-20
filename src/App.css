@@ -124,7 +124,7 @@
   border: 0.0625rem solid var(--stroke);
   background: var(--card2);
   border-radius: 999rem;
-  padding: 0.5rem 0.625rem;
+  padding: 0.75rem;
   font-size: 0.75rem;
   color: var(--textStrong);
   max-width: 100%;
