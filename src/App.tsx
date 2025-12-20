@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
 import { useAssetBalances, useUserAssetTotals } from './hooks/useAssetBalances'
@@ -18,19 +18,57 @@ import { MarketMoodCard } from './components/dashboard/MarketMoodCard'
 import { AccountModal } from './components/wallet/AccountModal'
 import { ConnectWalletModal } from './components/wallet/ConnectWalletModal'
 import { SwapModal } from './components/swap/SwapModal'
+import { Toast } from './components/Toast'
 import { useTheme } from './hooks/useTheme'
 import { compact, usd } from './lib/format'
 import './App.css'
 
+function getErrorMessage(err: unknown): string | undefined {
+  if (!err) return undefined
+  if (typeof err === 'string') return err
+  if (typeof err === 'object') {
+    const anyErr = err as { message?: unknown; shortMessage?: unknown; details?: unknown }
+    if (typeof anyErr.shortMessage === 'string' && anyErr.shortMessage.trim()) return anyErr.shortMessage
+    if (typeof anyErr.message === 'string' && anyErr.message.trim()) return anyErr.message
+    if (typeof anyErr.details === 'string' && anyErr.details.trim()) return anyErr.details
+    try {
+      return JSON.stringify(err)
+    } catch {
+      return undefined
+    }
+  }
+  return String(err)
+}
+
 function formatConnectErrorMessage(message: string): string {
-  const m = message.toLowerCase()
+  const trimmed = message.trim()
+
+  // Some providers throw non-Error values; wagmi/viem may stringify them.
+  if (trimmed === '[]') return 'Wallet request failed. Please try again.'
+
+  // Drop noisy suffixes like "Version: viem@...".
+  const withoutVersion = trimmed.replace(/\s*[,;]?\s*version:\s*viem@[^\s]+\s*$/i, '')
+  const m = withoutVersion.toLowerCase()
+
+  // Common UX-friendly cases
+  if (m.includes('user rejected') || m.includes('user rejected the request')) {
+    return 'Connection cancelled in your wallet.'
+  }
+  if (m.includes('connection request reset')) {
+    return 'WalletConnect request reset. Open your wallet and try connecting again.'
+  }
   if (m.includes('wallet_requestpermissions') && m.includes('already pending')) {
     return 'A wallet connection request is already pending. Open MetaMask and approve it, or wait and try again.'
   }
   if (m.includes('already pending')) {
     return 'A wallet connection request is already pending. Please wait and try again.'
   }
-  return message
+
+  // If the message contains a "Details:" section, only show the leading part.
+  const detailsIdx = withoutVersion.toLowerCase().indexOf('details:')
+  if (detailsIdx > 0) return withoutVersion.slice(0, detailsIdx).trim()
+
+  return withoutVersion
 }
 
 function App() {
@@ -50,8 +88,23 @@ function App() {
   const connectDisabled = isConnecting || connectUiPending
 
   const connectErrorText = useMemo(() => {
-    return connectError?.message ? formatConnectErrorMessage(connectError.message) : undefined
+    const msg = getErrorMessage(connectError)
+    return msg ? formatConnectErrorMessage(msg) : undefined
   }, [connectError])
+
+  const [connectToastOpen, setConnectToastOpen] = useState(false)
+  const [connectToastMessage, setConnectToastMessage] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    if (!connectErrorText) {
+      setConnectToastOpen(false)
+      return
+    }
+    setConnectToastMessage(connectErrorText)
+    setConnectToastOpen(true)
+    const t = window.setTimeout(() => setConnectToastOpen(false), 8000)
+    return () => window.clearTimeout(t)
+  }, [connectErrorText])
 
   const runConnect = useCallback(
     async (connector: (typeof connectors)[number]) => {
@@ -202,7 +255,12 @@ function App() {
         connectDisabled={connectDisabled}
       />
 
-      {connectErrorText ? <div className="banner error">{connectErrorText}</div> : null}
+      <Toast
+        open={connectToastOpen && !!connectToastMessage}
+        variant="error"
+        message={connectToastMessage ?? ''}
+        onClose={() => setConnectToastOpen(false)}
+      />
 
       <div className="toolbar">
         <div className="segmented" role="tablist" aria-label="Asset selector">

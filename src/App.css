@@ -172,6 +172,49 @@
   color: var(--textStrong);
 }
 
+.toastHost {
+  position: fixed;
+  right: 1rem;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  max-width: min(28rem, calc(100vw - 2rem));
+}
+
+.toast {
+  margin-top: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* Toasts should feel more solid than inline banners */
+.toast.banner {
+  background: var(--modalBg1);
+}
+
+.toast.banner.error {
+  background: rgba(239, 68, 68, 0.56);
+}
+
+.toastMessage {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toastClose {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 40rem) {
+  .toastHost {
+    left: 1rem;
+    right: 1rem;
+    max-width: none;
+  }
+}
+
 .kpiGrid {
   margin-top: 1rem;
   display: grid;
