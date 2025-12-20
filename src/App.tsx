@@ -17,6 +17,7 @@ import { Header } from './components/dashboard/Header'
 import { MarketMoodCard } from './components/dashboard/MarketMoodCard'
 import { AccountModal } from './components/wallet/AccountModal'
 import { ConnectWalletModal } from './components/wallet/ConnectWalletModal'
+import { SwapModal } from './components/swap/SwapModal'
 import { useTheme } from './hooks/useTheme'
 import { compact, usd } from './lib/format'
 import './App.css'
@@ -129,6 +130,7 @@ function App() {
 
   const [connectOpen, setConnectOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [swapOpen, setSwapOpen] = useState(false)
 
   const range7d = useMemo(() => {
     const pts = priceCandles.data ?? []
@@ -194,6 +196,7 @@ function App() {
         chain={chain}
         onOpenConnect={() => setConnectOpen(true)}
         onOpenAccount={() => setAccountOpen(true)}
+        onOpenSwap={() => setSwapOpen(true)}
         theme={theme}
         onToggleTheme={toggleTheme}
         connectDisabled={connectDisabled}
@@ -373,6 +376,14 @@ function App() {
           setConnectOpen(false)
           void runConnect(c)
         }}
+      />
+
+      <SwapModal
+        open={swapOpen}
+        onClose={() => setSwapOpen(false)}
+        assetKey={assetKey}
+        chain={chain}
+        isConnected={isConnected}
       />
 
       <AccountModal

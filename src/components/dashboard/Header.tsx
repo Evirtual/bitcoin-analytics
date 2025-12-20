@@ -10,6 +10,7 @@ export function Header({
   chain,
   onOpenConnect,
   onOpenAccount,
+  onOpenSwap,
   theme,
   onToggleTheme,
   connectDisabled,
@@ -20,6 +21,7 @@ export function Header({
   chain: Chain | undefined
   onOpenConnect: () => void
   onOpenAccount: () => void
+  onOpenSwap: () => void
   theme: 'dark' | 'light'
   onToggleTheme: () => void
   connectDisabled: boolean
@@ -54,10 +56,15 @@ export function Header({
             {connectDisabled ? 'Connecting…' : 'Connect'}
           </button>
         ) : (
-          <button className="pill pillBtn" onClick={onOpenAccount}>
-            {address?.slice(0, 6)}…{address?.slice(-4)}
-            {chain?.name ? ` • ${chain.name}` : ''}
-          </button>
+          <>
+            <button className="btn btnPrimary" type="button" onClick={onOpenSwap}>
+              Swap
+            </button>
+            <button className="pill pillBtn" onClick={onOpenAccount}>
+              {address?.slice(0, 6)}…{address?.slice(-4)}
+              {chain?.name ? ` • ${chain.name}` : ''}
+            </button>
+          </>
         )}
       </div>
     </header>

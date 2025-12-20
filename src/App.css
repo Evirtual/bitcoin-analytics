@@ -481,14 +481,20 @@
 
 .modal {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(35rem, calc(100vw - 1.75rem));
   border: 0.0625rem solid var(--stroke);
   background: linear-gradient(180deg, var(--modalBg1), var(--modalBg2));
   border-radius: 1rem;
   box-shadow: 0 1.125rem 3.75rem rgba(0, 0, 0, 0.55);
   overflow: hidden;
-  max-height: calc(100vh - 1.75rem);
-  max-height: calc(100dvh - 1.75rem);
+  max-height: calc(
+    100vh - 1.75rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
+  max-height: calc(
+    100dvh - 1.75rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
 }
 
 .modalHeader {
@@ -507,8 +513,26 @@
 
 .modalBody {
   padding: 0.875rem;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
+}
+
+.swapGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.625rem;
+}
+
+@media (min-width: 30rem) {
+  .swapGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.swapGrid > button {
+  width: 100%;
 }
 
 .iconBtn {

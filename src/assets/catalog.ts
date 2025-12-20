@@ -76,7 +76,13 @@ export const ASSETS: Record<AssetKey, AssetDefinition> = {
     perChain: {
       1: { kind: 'native', symbol: 'ETH', decimals: 18 },
       8453: { kind: 'native', symbol: 'ETH', decimals: 18 },
-      // Note: no ETH-native balance on BSC.
+      // BSC uses BNB for native gas; ETH exposure is typically via Binance-Peg ETH (BEP-20).
+      56: {
+        kind: 'erc20',
+        symbol: 'ETH',
+        decimals: 18,
+        address: '0x2170Ed0880ac9A755fd29B2688956BD959F933F8',
+      },
     },
   },
   USDT: {
