@@ -28,7 +28,6 @@
 .logoMark {
   flex: 0 0 auto;
   color: var(--textStrong);
-  filter: drop-shadow(0 0.625rem 1.375rem rgba(0, 0, 0, 0.55));
   margin-top: 0.125rem;
 }
 
@@ -41,7 +40,6 @@
 
 .titleAccent {
   color: var(--accent);
-  text-shadow: 0 0.625rem 1.625rem rgba(0, 0, 0, 0.55);
 }
 
 .brand .subtitle {
