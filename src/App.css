@@ -186,7 +186,6 @@
   background: linear-gradient(180deg, var(--card), var(--card2));
   border-radius: 0.875rem;
   padding: 0.875rem 0.875rem 0.75rem;
-  min-height: 7.25rem;
 }
 
 .kpiLabel {
