@@ -112,7 +112,7 @@ async function fetchCoinbaseCandles(
   assetKey: AssetKey,
   days: number,
   signal?: AbortSignal,
-): Promise<Array<{ t: string; price: number; volume: number }>> {
+): Promise<Array<{ t: string; ts: number; price: number; volume: number }>> {
   const asset = ASSETS[assetKey]
   if (!asset.coinbaseProductId) throw new Error('No product id configured')
 
@@ -138,6 +138,7 @@ async function fetchCoinbaseCandles(
     .sort((a, b) => a.ts - b.ts)
     .map((p) => ({
       t: new Date(p.ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' }),
+      ts: p.ts,
       price: p.close,
       volume: Number.isFinite(p.volume) ? p.volume : 0,
     }))
@@ -181,7 +182,7 @@ async function fetchCandlesWithFallback(
   assetKey: AssetKey,
   days: number,
   signal?: AbortSignal,
-): Promise<Array<{ t: string; price: number; volume: number }>> {
+): Promise<Array<{ t: string; ts: number; price: number; volume: number }>> {
   if (!shouldSkipCoinbase('candles')) {
     try {
       return await fetchCoinbaseCandles(assetKey, days, signal)
@@ -195,7 +196,7 @@ async function fetchCandlesWithFallback(
 async function fetchKrakenCandles(
   assetKey: AssetKey,
   days: number,
-): Promise<Array<{ t: string; price: number; volume: number }>> {
+): Promise<Array<{ t: string; ts: number; price: number; volume: number }>> {
   const asset = ASSETS[assetKey]
   const pair = asset.krakenPair ?? (assetKey === 'BTC' ? 'XBTUSD' : `${assetKey}USD`)
   const intervalMinutes = 60
@@ -219,6 +220,7 @@ async function fetchKrakenCandles(
     .sort((a, b) => a.ts - b.ts)
     .map((p) => ({
       t: new Date(p.ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' }),
+      ts: p.ts,
       price: p.close,
       volume: Number.isFinite(p.volume) ? p.volume : 0,
     }))

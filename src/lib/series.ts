@@ -17,7 +17,10 @@ export function stdev(values: number[]) {
 export function computeDailyReturns(points: CandlePoint[]): Array<{ day: string; ret: number }> {
   const dayMap = new Map<string, { first?: number; last?: number }>()
   for (const p of points) {
-    const day = p.t.split(',')[0] ?? p.t
+    const day =
+      typeof p.ts === 'number' && Number.isFinite(p.ts)
+        ? new Date(p.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+        : (p.t.split(',')[0] ?? p.t)
     const cur = dayMap.get(day) ?? {}
     if (cur.first === undefined) cur.first = p.price
     cur.last = p.price
@@ -25,7 +28,12 @@ export function computeDailyReturns(points: CandlePoint[]): Array<{ day: string;
   }
 
   return Array.from(dayMap.entries()).map(([day, v]) => {
-    const r = v.first && v.last ? ((v.last - v.first) / v.first) * 100 : 0
+    const first = v.first
+    const last = v.last
+    const r =
+      first !== undefined && last !== undefined && Number.isFinite(first) && Number.isFinite(last) && first !== 0
+        ? ((last - first) / first) * 100
+        : 0
     return { day, ret: Number.isFinite(r) ? r : 0 }
   })
 }
