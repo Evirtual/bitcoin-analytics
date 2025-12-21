@@ -55,6 +55,41 @@
   flex-wrap: wrap;
 }
 
+.pillIcon {
+  flex: 0 0 auto;
+  width: 1rem;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.pillIconHeart {
+  color: var(--danger);
+}
+
+.pillIconSun {
+  color: color-mix(in srgb, var(--danger) 55%, var(--accent2) 45%);
+}
+
+.pillIconMoon {
+  color: var(--accent);
+}
+
+.pillIconSwap {
+  color: var(--textStrong);
+}
+
+.pillIconWallet {
+  color: var(--muted);
+}
+
+.btnIcon {
+  margin-right: 0.5rem;
+  line-height: 1;
+  opacity: 0.9;
+}
+
 .toolbar {
   margin-top: 0.875rem;
   display: flex;
@@ -144,6 +179,16 @@
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
+.pillPrimary {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background: var(--accentSoft);
+}
+
+.pillPrimary:hover {
+  border-color: color-mix(in srgb, var(--accent) 90%, transparent);
+  background: color-mix(in srgb, var(--accentSoft) 80%, transparent);
+}
+
 .btn {
   border-radius: 0.625rem;
 }
@@ -207,11 +252,146 @@
   flex: 0 0 auto;
 }
 
+.supportIntro {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  margin-bottom: 0.875rem;
+}
+
+.supportList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.supportItem {
+  border: 0.0625rem solid var(--stroke);
+  background: linear-gradient(180deg, var(--card), var(--card2));
+  border-radius: 0.875rem;
+  overflow: hidden;
+}
+
+.supportItemHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--textStrong);
+}
+
+.supportItemHeader:focus {
+  outline: none;
+}
+
+.supportItemHeader:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 0.125rem color-mix(in srgb, var(--btnHoverBorder) 85%, transparent);
+  border-radius: 0.875rem;
+}
+
+.supportItemHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.supportItemHeader:hover {
+  background: color-mix(in srgb, var(--card2) 80%, transparent);
+}
+
+.supportItemHeaderOpen {
+  background: color-mix(in srgb, var(--accentSoft) 55%, transparent);
+}
+
+.supportItemTitle {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.supportItemChevron {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rem;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+  color: var(--textStrong);
+  line-height: 1;
+}
+
+.supportItemChevronGlyph {
+  position: relative;
+}
+
+.supportItemNotice {
+  padding: 0 0.875rem 0.875rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.supportItemBody {
+  padding: 0 0.875rem 0.875rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.supportQrWrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+}
+
+.supportQr {
+  max-width: 100%;
+  height: auto;
+}
+
+.supportQrBadge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  display: grid;
+  place-items: center;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--modalBg1);
+}
+
+.supportAddress {
+  font-size: 0.8125rem;
+  color: var(--textStrong);
+  word-break: break-all;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+}
+
 @media (max-width: 40rem) {
   .toastHost {
     left: 1rem;
     right: 1rem;
     max-width: none;
+  }
+
+  .walletAddressPill {
+    flex: 1 1 100%;
+    justify-content: flex-start;
   }
 }
 
@@ -387,6 +567,33 @@
   }
 
   .walletBar {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  .walletBar > button {
+    width: auto;
+    justify-content: center;
+  }
+
+  .headerSwapBtn,
+  .headerSupportBtn,
+  .headerThemeBtn {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
+  .headerSwapBtn,
+  .headerConnectBtn {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .walletAddressPill {
+    flex: 1 1 100%;
     justify-content: flex-start;
   }
 

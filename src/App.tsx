@@ -19,6 +19,7 @@ import { AccountModal } from './components/wallet/AccountModal'
 import { ConnectWalletModal } from './components/wallet/ConnectWalletModal'
 import { SwapModal } from './components/swap/SwapModal'
 import { Toast } from './components/Toast'
+import { SupportDeveloperModal } from './components/SupportDeveloperModal'
 import { useTheme } from './hooks/useTheme'
 import { compact, usd } from './lib/format'
 import './App.css'
@@ -184,6 +185,7 @@ function App() {
   const [connectOpen, setConnectOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [swapOpen, setSwapOpen] = useState(false)
+  const [supportOpen, setSupportOpen] = useState(false)
 
   const range7d = useMemo(() => {
     const pts = priceCandles.data ?? []
@@ -260,6 +262,7 @@ function App() {
         onOpenConnect={() => setConnectOpen(true)}
         onOpenAccount={() => setAccountOpen(true)}
         onOpenSwap={() => setSwapOpen(true)}
+        onOpenSupport={() => setSupportOpen(true)}
         theme={theme}
         onToggleTheme={toggleTheme}
         connectDisabled={connectDisabled}
@@ -434,6 +437,8 @@ function App() {
           />
         ) : null}
       </section>
+
+      <SupportDeveloperModal open={supportOpen} onClose={() => setSupportOpen(false)} />
 
       <ConnectWalletModal
         open={connectOpen}

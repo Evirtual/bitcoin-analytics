@@ -17,6 +17,7 @@
     "cryptocurrency-icons": "^0.18.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-qr-code": "^2.0.18",
     "recharts": "^3.6.0",
     "viem": "^2.43.2",
     "wagmi": "^3.1.0"
