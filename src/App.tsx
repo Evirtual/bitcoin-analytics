@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
 import { useAssetBalances, useUserAssetTotals } from './hooks/useAssetBalances'
@@ -15,6 +15,7 @@ import { ReturnsChartCard } from './components/charts/ReturnsChartCard'
 import { PortfolioChartCard } from './components/charts/PortfolioChartCard'
 import { Header } from './components/dashboard/Header'
 import { MarketMoodCard } from './components/dashboard/MarketMoodCard'
+import { MarketDashboardMeta } from './components/dashboard/MarketDashboardMeta'
 import { AccountModal } from './components/wallet/AccountModal'
 import { ConnectWalletModal } from './components/wallet/ConnectWalletModal'
 import { SwapModal } from './components/swap/SwapModal'
@@ -22,6 +23,7 @@ import { Toast } from './components/Toast'
 import { SupportDeveloperModal } from './components/SupportDeveloperModal'
 import { useTheme } from './hooks/useTheme'
 import { compact, usd } from './lib/format'
+import { formatConnectErrorMessage } from './lib/wallet'
 import './App.css'
 
 function getErrorMessage(err: unknown): string | undefined {
@@ -39,58 +41,6 @@ function getErrorMessage(err: unknown): string | undefined {
     }
   }
   return String(err)
-}
-
-function useOutsideClick(ref: { current: HTMLElement | null }, onOutside: () => void, enabled: boolean) {
-  useEffect(() => {
-    if (!enabled) return
-
-    function onPointerDown(e: MouseEvent | TouchEvent) {
-      const el = ref.current
-      if (!el) return
-      const target = e.target as Node | null
-      if (target && el.contains(target)) return
-      onOutside()
-    }
-
-    document.addEventListener('mousedown', onPointerDown)
-    document.addEventListener('touchstart', onPointerDown)
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown)
-      document.removeEventListener('touchstart', onPointerDown)
-    }
-  }, [enabled, onOutside, ref])
-}
-
-function formatConnectErrorMessage(message: string): string {
-  const trimmed = message.trim()
-
-  // Some providers throw non-Error values; wagmi/viem may stringify them.
-  if (trimmed === '[]') return 'Wallet request failed. Please try again.'
-
-  // Drop noisy suffixes like "Version: viem@...".
-  const withoutVersion = trimmed.replace(/\s*[,;]?\s*version:\s*viem@[^\s]+\s*$/i, '')
-  const m = withoutVersion.toLowerCase()
-
-  // Common UX-friendly cases
-  if (m.includes('user rejected') || m.includes('user rejected the request')) {
-    return 'Connection cancelled in your wallet.'
-  }
-  if (m.includes('connection request reset')) {
-    return 'WalletConnect request reset. Open your wallet and try connecting again.'
-  }
-  if (m.includes('wallet_requestpermissions') && m.includes('already pending')) {
-    return 'A wallet connection request is already pending. Open MetaMask and approve it, or wait and try again.'
-  }
-  if (m.includes('already pending')) {
-    return 'A wallet connection request is already pending. Please wait and try again.'
-  }
-
-  // If the message contains a "Details:" section, only show the leading part.
-  const detailsIdx = withoutVersion.toLowerCase().indexOf('details:')
-  if (detailsIdx > 0) return withoutVersion.slice(0, detailsIdx).trim()
-
-  return withoutVersion
 }
 
 function App() {
@@ -207,33 +157,6 @@ function App() {
   const [accountOpen, setAccountOpen] = useState(false)
   const [swapOpen, setSwapOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
-  const [marketInfoPinned, setMarketInfoPinned] = useState(false)
-  const [marketInfoHover, setMarketInfoHover] = useState(false)
-  const [marketInfoFocus, setMarketInfoFocus] = useState(false)
-  const marketInfoOpen = marketInfoPinned || marketInfoHover || marketInfoFocus
-  const marketInfoWrapRef = useRef<HTMLSpanElement>(null)
-
-  useOutsideClick(
-    marketInfoWrapRef,
-    () => {
-      setMarketInfoPinned(false)
-      setMarketInfoHover(false)
-      setMarketInfoFocus(false)
-    },
-    marketInfoOpen,
-  )
-
-  useEffect(() => {
-    if (!marketInfoOpen) return
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== 'Escape') return
-      setMarketInfoPinned(false)
-      setMarketInfoHover(false)
-      setMarketInfoFocus(false)
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [marketInfoOpen])
 
   const range7d = useMemo(() => {
     const pts = priceCandles.data ?? []
@@ -338,46 +261,7 @@ function App() {
             </button>
           ))}
         </div>
-        <div className="dashboardMeta muted small">
-          <span>{assetTotals.isLoading ? 'Refreshing…' : 'Market dashboard'}</span>
-          <span
-            ref={marketInfoWrapRef}
-            className="infoWrap"
-            onMouseEnter={() => setMarketInfoHover(true)}
-            onMouseLeave={() => setMarketInfoHover(false)}
-          >
-            <button
-              type="button"
-              className="infoBtn"
-              aria-label="About this market dashboard"
-              aria-expanded={marketInfoOpen}
-              aria-describedby={marketInfoOpen ? 'market-dashboard-tooltip' : undefined}
-              onFocus={() => setMarketInfoFocus(true)}
-              onBlur={() => setMarketInfoFocus(false)}
-              onClick={() => setMarketInfoPinned((v) => !v)}
-            >
-              i
-            </button>
-            {marketInfoOpen ? (
-              <div className="infoTooltip" id="market-dashboard-tooltip" role="tooltip">
-                <div className="infoTooltipTitle">How this data is fetched</div>
-                <div className="infoTooltipRow">
-                  <span className="infoTooltipKey">Spot price:</span> Coinbase spot API (fallback to Kraken).
-                </div>
-                <div className="infoTooltipRow">
-                  <span className="infoTooltipKey">Charts:</span> Hourly candles from Coinbase Exchange (fallback to Kraken OHLC).
-                </div>
-                <div className="infoTooltipRow">
-                  <span className="infoTooltipKey">Sentiment:</span> Fear &amp; Greed Index from alternative.me.
-                </div>
-                <div className="infoTooltipDivider" />
-                <div className="infoTooltipRow">
-                  <span className="infoTooltipKey">Update interval:</span> Prices refresh about every 60 seconds; other metrics refresh every few minutes.
-                </div>
-              </div>
-            ) : null}
-          </span>
-        </div>
+        <MarketDashboardMeta isRefreshing={assetTotals.isLoading} />
       </div>
 
       <div className="kpiGrid">

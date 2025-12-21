@@ -127,7 +127,7 @@
   position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
-  width: min(24rem, calc(100vw - 2rem));
+  width: min(20rem, calc(100vw - 2rem));
   background: var(--tooltipBg);
   border: 0.0625rem solid var(--tooltipBorder);
   box-shadow: var(--tooltipShadow);
@@ -135,6 +135,14 @@
   border-radius: 0.75rem;
   padding: 0.625rem 0.75rem;
   z-index: 50;
+}
+
+@media (max-width: 43.5rem) {
+  .infoTooltip {
+    right: auto;
+    left: 0;
+    transform: translateX(-7rem);
+  }
 }
 
 .infoTooltipTitle {
