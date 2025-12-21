@@ -5,6 +5,7 @@ React + TypeScript + Vite dashboard for:
 - BTC price + simple 7d chart
 - Wallet connection (Injected + optional WalletConnect)
 - Multichain wrapped BTC balances: Ethereum (WBTC), Base (WBTC), BSC (BTCB default)
+- Optional “Support the developer” modal with donation addresses + QR codes
 
 ## Production checklist
 
@@ -26,9 +27,23 @@ React + TypeScript + Vite dashboard for:
 
 ## WalletConnect (optional)
 
-Copy `.env.example` to `.env` and set:
+Copy `.env.example` to `.env.local` (recommended) and set:
 
 - `VITE_WALLETCONNECT_PROJECT_ID`
+
+## Support developer modal
+
+The “Support the developer” modal displays donation addresses and a QR code for each.
+
+Implementation notes:
+
+- QR codes are rendered with `qrcode.react`.
+- Asset icons come from `cryptocurrency-icons`.
+
+## Third‑party licenses (quick note)
+
+- `cryptocurrency-icons` is CC0-1.0
+- `qrcode.react` is ISC
 
 ## Deploy (free/public): GitHub Pages
 
