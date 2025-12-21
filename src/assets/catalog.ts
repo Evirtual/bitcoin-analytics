@@ -34,7 +34,7 @@ export type AssetDefinition = {
   spotSymbol?: string
   // Optional override for Kraken pair codes (some assets don't match `${symbol}USD`).
   krakenPair?: string
-  perChain: Partial<Record<ChainId, AssetOnChain>>
+  perChain: Partial<Record<ChainId, AssetOnChain | AssetOnChain[]>>
 }
 
 export const ASSETS: Record<AssetKey, AssetDefinition> = {
@@ -77,8 +77,25 @@ export const ASSETS: Record<AssetKey, AssetDefinition> = {
     coinbaseProductId: 'ETH-USD',
     spotSymbol: 'ETH',
     perChain: {
-      1: { kind: 'native', symbol: 'ETH', decimals: 18 },
-      8453: { kind: 'native', symbol: 'ETH', decimals: 18 },
+      // Count both native ETH and wrapped ETH (WETH) since many wallets hold WETH.
+      1: [
+        { kind: 'native', symbol: 'ETH', decimals: 18 },
+        {
+          kind: 'erc20',
+          symbol: 'WETH',
+          decimals: 18,
+          address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+        },
+      ],
+      8453: [
+        { kind: 'native', symbol: 'ETH', decimals: 18 },
+        {
+          kind: 'erc20',
+          symbol: 'WETH',
+          decimals: 18,
+          address: '0x4200000000000000000000000000000000000006',
+        },
+      ],
       // BSC uses BNB for native gas; ETH exposure is typically via Binance-Peg ETH (BEP-20).
       56: {
         kind: 'erc20',
@@ -148,7 +165,16 @@ export const ASSETS: Record<AssetKey, AssetDefinition> = {
     spotSymbol: 'BNB',
     krakenPair: 'BNBUSD',
     perChain: {
-      56: { kind: 'native', symbol: 'BNB', decimals: 18 },
+      // Count both native BNB and wrapped BNB (WBNB) on BSC.
+      56: [
+        { kind: 'native', symbol: 'BNB', decimals: 18 },
+        {
+          kind: 'erc20',
+          symbol: 'WBNB',
+          decimals: 18,
+          address: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
+        },
+      ],
     },
   },
   DOGE: {

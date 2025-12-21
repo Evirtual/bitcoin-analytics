@@ -70,30 +70,34 @@ export async function fetchAssetBalances(address: Address, assetKey: AssetKey, c
     amount: number
   }> = []
 
-  for (const chainId of chainIds) {
-      const def = asset.perChain[chainId]
-      if (!def) {
-        rows.push({
-          chainId,
-          chainName: CHAINS.find((c) => c.id === chainId)?.name ?? String(chainId),
-          supported: false,
-          tokenSymbol: '—',
-          amount: 0,
-        })
-        continue
-      }
+  const chainName = (chainId: ChainId) => CHAINS.find((c) => c.id === chainId)?.name ?? String(chainId)
 
-      const client = getClient(chainId)
+  const toDefs = (value: (typeof asset.perChain)[ChainId] | undefined) => {
+    if (!value) return [] as const
+    return Array.isArray(value) ? value : [value]
+  }
+
+  for (const chainId of chainIds) {
+    const defs = toDefs(asset.perChain[chainId])
+    if (!defs.length) {
+      rows.push({
+        chainId,
+        chainName: chainName(chainId),
+        supported: false,
+        tokenSymbol: '—',
+        amount: 0,
+      })
+      continue
+    }
+
+    const client = getClient(chainId)
+
+    let sum = 0
+    for (const def of defs) {
       if (def.kind === 'native') {
         const bal = await client.getBalance({ address })
         const amount = Number(formatUnits(bal, def.decimals))
-        rows.push({
-          chainId,
-          chainName: CHAINS.find((c) => c.id === chainId)?.name ?? String(chainId),
-          supported: true,
-          tokenSymbol: def.symbol,
-          amount: Number.isFinite(amount) ? amount : 0,
-        })
+        sum += Number.isFinite(amount) ? amount : 0
         continue
       }
 
@@ -104,13 +108,18 @@ export async function fetchAssetBalances(address: Address, assetKey: AssetKey, c
         args: [address],
       })
       const amount = Number(formatUnits(bal, def.decimals))
-      rows.push({
-        chainId,
-        chainName: CHAINS.find((c) => c.id === chainId)?.name ?? String(chainId),
-        supported: true,
-        tokenSymbol: def.symbol,
-        amount: Number.isFinite(amount) ? amount : 0,
-      })
+      sum += Number.isFinite(amount) ? amount : 0
+    }
+
+    // If multiple representations exist (e.g. native + wrapped), show the canonical asset key.
+    const tokenSymbol = defs.length > 1 ? assetKey : defs[0]!.symbol
+    rows.push({
+      chainId,
+      chainName: chainName(chainId),
+      supported: true,
+      tokenSymbol,
+      amount: sum,
+    })
   }
 
   const byChain = rows.map((r) => ({

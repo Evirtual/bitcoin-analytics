@@ -28,29 +28,31 @@ function AssetBalanceDetails({
   if (q.isLoading) return <div className="assetDetails muted">Loading network balances…</div>
   if (!q.data) return <div className="assetDetails muted">Network balances unavailable.</div>
 
+  const rows = q.data.byChain.filter((r) => r.supported)
+
   return (
     <div className="assetDetails">
       <div className="assetDetailsHeader muted small">Per network</div>
       <div className="assetDetailsGrid">
-        {q.data.byChain.map((r) => {
-          const usdValue = priceUsd !== undefined ? priceUsd * r.amount : undefined
-          return (
-            <div key={r.chainId} className="assetDetailsRow">
-              <div className="assetDetailsLeft">
-                <div className="assetDetailsChain">{r.chainName}</div>
-                <div className="assetDetailsMeta muted small">
-                  {r.supported ? r.tokenSymbol : 'Not supported'}
+        {rows.length ? (
+          rows.map((r) => {
+            const usdValue = priceUsd !== undefined ? priceUsd * r.amount : undefined
+            return (
+              <div key={r.chainId} className="assetDetailsRow">
+                <div className="assetDetailsLeft">
+                  <div className="assetDetailsChain">{r.chainName}</div>
+                  <div className="assetDetailsMeta muted small">{r.tokenSymbol}</div>
+                </div>
+                <div className="assetDetailsRight">
+                  <div className="mono">{r.formatted}</div>
+                  <div className="muted small">{usdValue !== undefined ? usd.format(usdValue) : '—'}</div>
                 </div>
               </div>
-              <div className="assetDetailsRight">
-                <div className="mono">
-                  {r.supported ? r.formatted : '—'}
-                </div>
-                <div className="muted small">{usdValue !== undefined && r.supported ? usd.format(usdValue) : '—'}</div>
-              </div>
-            </div>
-          )
-        })}
+            )
+          })
+        ) : (
+          <div className="muted">No supported networks configured.</div>
+        )}
       </div>
     </div>
   )
