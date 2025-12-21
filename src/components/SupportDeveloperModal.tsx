@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { QRCode } from 'react-qr-code'
+import { QRCodeSVG } from 'qrcode.react'
 import type { AssetKey } from '../assets/catalog'
 import { AssetIcon } from './AssetIcon'
 import { Modal } from './Modal'
@@ -134,7 +134,7 @@ export function SupportDeveloperModal({
                 {expanded ? (
                   <div className="supportItemBody">
                     <div className="supportQrWrap" aria-label={`${t.label} donation QR code`}>
-                      <QRCode value={t.address} size={164} className="supportQr" />
+                      <QRCodeSVG value={t.address} size={164} className="supportQr" />
                       <div className="supportQrBadge" aria-hidden="true">
                         <AssetIcon assetKey={t.assetKey} size={26} />
                       </div>
