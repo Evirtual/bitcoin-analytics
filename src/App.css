@@ -332,7 +332,7 @@
 }
 
 .supportItemNotice {
-  padding: 0.875rem;
+  padding: 0.675rem 0.875rem;
   color: var(--muted);
   font-size: 0.8125rem;
   border-top: 0.0625rem solid var(--divider);

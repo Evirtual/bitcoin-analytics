@@ -121,11 +121,14 @@ export function SupportDeveloperModal({
                   aria-expanded={expanded}
                 >
                   <div className="supportItemHeaderLeft">
-                    <AssetIcon assetKey={t.assetKey} size={18} />
+                    <AssetIcon assetKey={t.assetKey} size={24} className="assetRowIcon" />
                     <div className="supportItemTitle">{t.label}</div>
                   </div>
-                  <div className="supportItemChevron" aria-hidden="true">
-                    <span className="supportItemChevronGlyph">{expanded ? '−' : '+'}</span>
+                  <div
+                    className={expanded ? 'assetRowChevron assetRowChevronOpen' : 'assetRowChevron'}
+                    aria-hidden="true"
+                  >
+                    ▾
                   </div>
                 </button>
 
@@ -136,7 +139,7 @@ export function SupportDeveloperModal({
                     <div className="supportQrWrap" aria-label={`${t.label} donation QR code`}>
                       <QRCodeSVG value={t.address} size={164} className="supportQr" />
                       <div className="supportQrBadge" aria-hidden="true">
-                        <AssetIcon assetKey={t.assetKey} size={26} />
+                        <AssetIcon assetKey={t.assetKey} size={26} className="assetRowIcon" />
                       </div>
                     </div>
 
