@@ -144,8 +144,9 @@ async function fetchCoinbaseCandles(
 }
 
 async function fetchKrakenSpotUsd(assetKey: AssetKey): Promise<number> {
-  // Kraken uses different pair codes.
-  const pair = assetKey === 'BTC' ? 'XBTUSD' : `${assetKey}USD`
+  const asset = ASSETS[assetKey]
+  // Kraken uses different pair codes for some assets.
+  const pair = asset.krakenPair ?? (assetKey === 'BTC' ? 'XBTUSD' : `${assetKey}USD`)
   const res = await fetch(`https://api.kraken.com/0/public/Ticker?pair=${pair}`)
   if (!res.ok) throw new Error('Kraken spot failed')
   const json = (await res.json()) as KrakenTickerResponse
@@ -195,7 +196,8 @@ async function fetchKrakenCandles(
   assetKey: AssetKey,
   days: number,
 ): Promise<Array<{ t: string; price: number; volume: number }>> {
-  const pair = assetKey === 'BTC' ? 'XBTUSD' : `${assetKey}USD`
+  const asset = ASSETS[assetKey]
+  const pair = asset.krakenPair ?? (assetKey === 'BTC' ? 'XBTUSD' : `${assetKey}USD`)
   const intervalMinutes = 60
   const since = Math.floor((Date.now() - days * 24 * 60 * 60 * 1000) / 1000)
   const res = await fetch(

@@ -183,7 +183,7 @@ export function useUserAssetTotals(address: Address | undefined, chainIds: Chain
         const res = await fetchAssetBalances(address, assetKey, chainIds)
         rows.push({ assetKey, totalAmount: res.totalAmount })
       }
-      return rows.sort((a, b) => b.totalAmount - a.totalAmount)
+      return rows
     },
     staleTime: 2 * 60_000,
     refetchInterval: false,

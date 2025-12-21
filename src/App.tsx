@@ -126,7 +126,7 @@ function App() {
 
   const chainIds = useMemo<ChainId[]>(() => [1, 8453, 56], [])
 
-  const supportedAssetKeys = useMemo<AssetKey[]>(() => ['BTC', 'ETH', 'USDT', 'USDC'], [])
+  const supportedAssetKeys = useMemo<AssetKey[]>(() => ['BTC', 'ETH', 'BNB', 'DOGE', 'USDT', 'USDC'], [])
   const assetTotals = useUserAssetTotals(address, chainIds, supportedAssetKeys)
 
   const spotMany = useSpotUsdMany(supportedAssetKeys)
@@ -222,8 +222,6 @@ function App() {
     return sum / n
   }, [volumeCandles.data])
 
-  const assetOptions = supportedAssetKeys
-
   const heldSet = useMemo(() => {
     const set = new Set<AssetKey>()
     for (const a of assetTotals.data ?? []) {
@@ -231,6 +229,18 @@ function App() {
     }
     return set
   }, [assetTotals.data])
+
+  const assetOptions = useMemo(() => {
+    const order = new Map<AssetKey, number>()
+    for (let i = 0; i < supportedAssetKeys.length; i++) order.set(supportedAssetKeys[i]!, i)
+
+    return [...supportedAssetKeys].sort((a, b) => {
+      const aHeld = heldSet.has(a)
+      const bHeld = heldSet.has(b)
+      if (aHeld !== bHeld) return aHeld ? -1 : 1
+      return (order.get(a) ?? 0) - (order.get(b) ?? 0)
+    })
+  }, [heldSet, supportedAssetKeys])
 
   return (
     <div

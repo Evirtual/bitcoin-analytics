@@ -7,6 +7,8 @@ import btcUrl from 'cryptocurrency-icons/svg/color/btc.svg?url'
 import ethUrl from 'cryptocurrency-icons/svg/color/eth.svg?url'
 import usdtUrl from 'cryptocurrency-icons/svg/color/usdt.svg?url'
 import usdcUrl from 'cryptocurrency-icons/svg/color/usdc.svg?url'
+import bnbUrl from 'cryptocurrency-icons/svg/color/bnb.svg?url'
+import dogeUrl from 'cryptocurrency-icons/svg/color/doge.svg?url'
 
 export function AssetIcon(props: {
   assetKey: AssetKey
@@ -26,7 +28,13 @@ export function AssetIcon(props: {
         ? ethUrl
         : props.assetKey === 'USDT'
           ? usdtUrl
-          : usdcUrl
+          : props.assetKey === 'USDC'
+            ? usdcUrl
+            : props.assetKey === 'BNB'
+              ? bnbUrl
+              : props.assetKey === 'DOGE'
+                ? dogeUrl
+                : undefined
 
   // Prefer the CC0 icon set for a familiar look.
   if (src && !failed) {
@@ -51,7 +59,11 @@ export function AssetIcon(props: {
         ? '#627EEA'
         : props.assetKey === 'USDT'
           ? '#26A17B'
-          : '#2775CA'
+          : props.assetKey === 'USDC'
+            ? '#2775CA'
+            : props.assetKey === 'BNB'
+              ? '#F3BA2F'
+              : '#C2A633'
 
   return (
     <svg

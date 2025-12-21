@@ -1,7 +1,7 @@
 import type { Address } from 'viem'
 
 export type ChainId = 1 | 8453 | 56
-export type AssetKey = 'BTC' | 'ETH' | 'USDT' | 'USDC'
+export type AssetKey = 'BTC' | 'ETH' | 'USDT' | 'USDC' | 'BNB' | 'DOGE'
 
 export const CHAINS: Array<{ id: ChainId; name: string }> = [
   { id: 1, name: 'Ethereum' },
@@ -32,6 +32,8 @@ export type AssetDefinition = {
   coinbaseProductId?: string
   // Used for Coinbase spot endpoint (base currency).
   spotSymbol?: string
+  // Optional override for Kraken pair codes (some assets don't match `${symbol}USD`).
+  krakenPair?: string
   perChain: Partial<Record<ChainId, AssetOnChain>>
 }
 
@@ -43,6 +45,7 @@ export const ASSETS: Record<AssetKey, AssetDefinition> = {
     accentSoft: 'rgba(247, 147, 26, 0.18)',
     coinbaseProductId: 'BTC-USD',
     spotSymbol: 'BTC',
+    krakenPair: 'XBTUSD',
     perChain: {
       // Wrapped BTC variants
       1: {
@@ -133,6 +136,36 @@ export const ASSETS: Record<AssetKey, AssetDefinition> = {
         symbol: 'USDC',
         decimals: 18,
         address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+      },
+    },
+  },
+  BNB: {
+    key: 'BNB',
+    label: 'BNB',
+    accent: '#F3BA2F',
+    accentSoft: 'rgba(243, 186, 47, 0.18)',
+    coinbaseProductId: 'BNB-USD',
+    spotSymbol: 'BNB',
+    krakenPair: 'BNBUSD',
+    perChain: {
+      56: { kind: 'native', symbol: 'BNB', decimals: 18 },
+    },
+  },
+  DOGE: {
+    key: 'DOGE',
+    label: 'Dogecoin',
+    accent: '#C2A633',
+    accentSoft: 'rgba(194, 166, 51, 0.18)',
+    coinbaseProductId: 'DOGE-USD',
+    spotSymbol: 'DOGE',
+    krakenPair: 'XDGUSD',
+    perChain: {
+      // Binance-Peg Dogecoin (BEP-20)
+      56: {
+        kind: 'erc20',
+        symbol: 'DOGE',
+        decimals: 8,
+        address: '0xbA2aE424d960c26247Dd6c32edC70B295c744C43',
       },
     },
   },
