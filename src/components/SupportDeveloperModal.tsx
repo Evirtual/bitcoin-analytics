@@ -176,6 +176,18 @@ export function SupportDeveloperModal({
             )
           })}
         </div>
+
+        <div className="supportFooter muted small">
+          <a href="https://github.com/Evirtual/bitcoin-analytics" target="_blank" rel="noopener noreferrer">
+            GitHub
+          </a>
+          <span className="supportFooterDot" aria-hidden="true">
+            •
+          </span>
+          <a href="https://github.com/Evirtual/bitcoin-analytics#readme" target="_blank" rel="noopener noreferrer">
+            About
+          </a>
+        </div>
       </Modal>
 
       <Toast open={toastOpen} variant={toastVariant} message={toastMessage} onClose={() => setToastOpen(false)} />
