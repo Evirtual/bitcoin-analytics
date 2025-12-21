@@ -99,6 +99,63 @@
   flex-wrap: wrap;
 }
 
+.dashboardMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.infoWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.infoBtn {
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border-radius: 999rem;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.infoTooltip {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(24rem, calc(100vw - 2rem));
+  background: var(--tooltipBg);
+  border: 0.0625rem solid var(--tooltipBorder);
+  box-shadow: var(--tooltipShadow);
+  color: var(--tooltipText);
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  z-index: 50;
+}
+
+.infoTooltipTitle {
+  font-weight: 700;
+  margin-bottom: 0.375rem;
+}
+
+.infoTooltipRow {
+  margin-top: 0.25rem;
+}
+
+.infoTooltipKey {
+  color: var(--tooltipLabel);
+}
+
+.infoTooltipDivider {
+  height: 0.0625rem;
+  background: color-mix(in srgb, var(--tooltipBorder) 65%, transparent);
+  margin: 0.5rem 0;
+}
+
 .small {
   font-size: 0.75rem;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
 import { useAssetBalances, useUserAssetTotals } from './hooks/useAssetBalances'
@@ -39,6 +39,27 @@ function getErrorMessage(err: unknown): string | undefined {
     }
   }
   return String(err)
+}
+
+function useOutsideClick(ref: { current: HTMLElement | null }, onOutside: () => void, enabled: boolean) {
+  useEffect(() => {
+    if (!enabled) return
+
+    function onPointerDown(e: MouseEvent | TouchEvent) {
+      const el = ref.current
+      if (!el) return
+      const target = e.target as Node | null
+      if (target && el.contains(target)) return
+      onOutside()
+    }
+
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('touchstart', onPointerDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('touchstart', onPointerDown)
+    }
+  }, [enabled, onOutside, ref])
 }
 
 function formatConnectErrorMessage(message: string): string {
@@ -186,6 +207,33 @@ function App() {
   const [accountOpen, setAccountOpen] = useState(false)
   const [swapOpen, setSwapOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
+  const [marketInfoPinned, setMarketInfoPinned] = useState(false)
+  const [marketInfoHover, setMarketInfoHover] = useState(false)
+  const [marketInfoFocus, setMarketInfoFocus] = useState(false)
+  const marketInfoOpen = marketInfoPinned || marketInfoHover || marketInfoFocus
+  const marketInfoWrapRef = useRef<HTMLSpanElement>(null)
+
+  useOutsideClick(
+    marketInfoWrapRef,
+    () => {
+      setMarketInfoPinned(false)
+      setMarketInfoHover(false)
+      setMarketInfoFocus(false)
+    },
+    marketInfoOpen,
+  )
+
+  useEffect(() => {
+    if (!marketInfoOpen) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return
+      setMarketInfoPinned(false)
+      setMarketInfoHover(false)
+      setMarketInfoFocus(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [marketInfoOpen])
 
   const range7d = useMemo(() => {
     const pts = priceCandles.data ?? []
@@ -290,7 +338,46 @@ function App() {
             </button>
           ))}
         </div>
-        <div className="muted small">{assetTotals.isLoading ? 'Refreshing…' : 'Market dashboard'}</div>
+        <div className="dashboardMeta muted small">
+          <span>{assetTotals.isLoading ? 'Refreshing…' : 'Market dashboard'}</span>
+          <span
+            ref={marketInfoWrapRef}
+            className="infoWrap"
+            onMouseEnter={() => setMarketInfoHover(true)}
+            onMouseLeave={() => setMarketInfoHover(false)}
+          >
+            <button
+              type="button"
+              className="infoBtn"
+              aria-label="About this market dashboard"
+              aria-expanded={marketInfoOpen}
+              aria-describedby={marketInfoOpen ? 'market-dashboard-tooltip' : undefined}
+              onFocus={() => setMarketInfoFocus(true)}
+              onBlur={() => setMarketInfoFocus(false)}
+              onClick={() => setMarketInfoPinned((v) => !v)}
+            >
+              i
+            </button>
+            {marketInfoOpen ? (
+              <div className="infoTooltip" id="market-dashboard-tooltip" role="tooltip">
+                <div className="infoTooltipTitle">How this data is fetched</div>
+                <div className="infoTooltipRow">
+                  <span className="infoTooltipKey">Spot price:</span> Coinbase spot API (fallback to Kraken).
+                </div>
+                <div className="infoTooltipRow">
+                  <span className="infoTooltipKey">Charts:</span> Hourly candles from Coinbase Exchange (fallback to Kraken OHLC).
+                </div>
+                <div className="infoTooltipRow">
+                  <span className="infoTooltipKey">Sentiment:</span> Fear &amp; Greed Index from alternative.me.
+                </div>
+                <div className="infoTooltipDivider" />
+                <div className="infoTooltipRow">
+                  <span className="infoTooltipKey">Update interval:</span> Prices refresh about every 60 seconds; other metrics refresh every few minutes.
+                </div>
+              </div>
+            ) : null}
+          </span>
+        </div>
       </div>
 
       <div className="kpiGrid">
