@@ -1,44 +1,60 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useOutsideClick } from '../../hooks/useOutsideClick'
 
 export function MarketDashboardMeta({ isRefreshing }: { isRefreshing: boolean }) {
   const [infoPinned, setInfoPinned] = useState(false)
   const [infoHover, setInfoHover] = useState(false)
   const [infoFocus, setInfoFocus] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
-  const infoOpen = infoPinned || infoHover || infoFocus
+  const infoOpen = infoPinned || (!isMobile && (infoHover || infoFocus))
   const wrapRef = useRef<HTMLSpanElement>(null)
 
-  useOutsideClick(
-    wrapRef,
-    () => {
-      setInfoPinned(false)
-      setInfoHover(false)
-      setInfoFocus(false)
-    },
-    infoOpen,
-  )
+  const closeInfo = useCallback(() => {
+    setInfoPinned(false)
+    setInfoHover(false)
+    setInfoFocus(false)
+  }, [])
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 43.5rem)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  useOutsideClick(wrapRef, closeInfo, infoOpen)
 
   useEffect(() => {
     if (!infoOpen) return
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== 'Escape') return
-      setInfoPinned(false)
-      setInfoHover(false)
-      setInfoFocus(false)
+      closeInfo()
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [infoOpen])
+  }, [closeInfo, infoOpen])
+
+  useEffect(() => {
+    if (!isMobile || !infoOpen) return
+    // Prevent background scroll when the mobile popup is open.
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [infoOpen, isMobile])
 
   return (
     <div className="dashboardMeta muted small">
+      {isMobile && infoOpen ? <div className="infoBackdrop" onClick={closeInfo} aria-hidden="true" /> : null}
       <span>{isRefreshing ? 'Refreshing…' : 'Market dashboard'}</span>
       <span
         ref={wrapRef}
         className="infoWrap"
-        onMouseEnter={() => setInfoHover(true)}
-        onMouseLeave={() => setInfoHover(false)}
+        onMouseEnter={() => (isMobile ? undefined : setInfoHover(true))}
+        onMouseLeave={() => (isMobile ? undefined : setInfoHover(false))}
       >
         <button
           type="button"
@@ -46,14 +62,23 @@ export function MarketDashboardMeta({ isRefreshing }: { isRefreshing: boolean })
           aria-label="About this market dashboard"
           aria-expanded={infoOpen}
           aria-describedby={infoOpen ? 'market-dashboard-tooltip' : undefined}
-          onFocus={() => setInfoFocus(true)}
-          onBlur={() => setInfoFocus(false)}
+          onFocus={() => (isMobile ? undefined : setInfoFocus(true))}
+          onBlur={() => (isMobile ? undefined : setInfoFocus(false))}
           onClick={() => setInfoPinned((v) => !v)}
         >
           i
         </button>
         {infoOpen ? (
-          <div className="infoTooltip" id="market-dashboard-tooltip" role="tooltip">
+          <div
+            className={isMobile ? 'infoTooltip infoTooltipMobile' : 'infoTooltip'}
+            id="market-dashboard-tooltip"
+            role="tooltip"
+          >
+            {isMobile ? (
+              <button type="button" className="infoTooltipClose" onClick={closeInfo} aria-label="Close">
+                ✕
+              </button>
+            ) : null}
             <div className="infoTooltipTitle">How this data is fetched</div>
             <div className="infoTooltipRow">
               <span className="infoTooltipKey">Spot price:</span> Coinbase spot API (fallback to Kraken).
