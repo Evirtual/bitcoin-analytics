@@ -343,6 +343,10 @@
   gap: 0.75rem;
 }
 
+.supportExplorerBtn {
+  width: 100%;
+}
+
 .supportQrWrap {
   position: relative;
   display: grid;

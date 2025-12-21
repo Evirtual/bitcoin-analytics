@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import QRCode from 'react-qr-code'
+import { QRCode } from 'react-qr-code'
 import type { AssetKey } from '../assets/catalog'
 import { AssetIcon } from './AssetIcon'
 import { Modal } from './Modal'
 import { Toast } from './Toast'
 
 type DonationTarget = {
-  key: 'bitcoin' | 'ethereum' | 'bnb'
+  key: 'bitcoin' | 'ethereum' | 'base' | 'bnb'
   label: string
   networkNotice: string
   assetKey: AssetKey
   address: string
+  explorerUrl?: string
 }
 
 const DONATION_TARGETS: DonationTarget[] = [
@@ -27,6 +28,15 @@ const DONATION_TARGETS: DonationTarget[] = [
     networkNotice: 'Important: send only on the Ethereum network (ERC-20).',
     assetKey: 'ETH',
     address: '0x7426a2709041e13e2763e7dbe4cc417a54257ec1',
+  },
+  {
+    key: 'base',
+    label: 'Base',
+    networkNotice: 'Important: send only on the Base network.',
+    // Base uses an EVM address; show the familiar ETH icon.
+    assetKey: 'ETH',
+    address: '0x7426a2709041e13e2763e7dbe4cc417a54257ec1',
+    explorerUrl: 'https://basescan.org/address/0x7426a2709041e13e2763e7dbe4cc417a54257ec1',
   },
   {
     key: 'bnb',
@@ -88,6 +98,10 @@ export function SupportDeveloperModal({
     setToastOpen(true)
   }, [])
 
+  const onOpenExplorer = useCallback((url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }, [])
+
   return (
     <>
       <Modal open={open} title="Support the developer" onClose={onClose}>
@@ -143,6 +157,16 @@ export function SupportDeveloperModal({
                         ⧉
                       </button>
                     </div>
+
+                    {t.explorerUrl ? (
+                      <button
+                        className="btn supportExplorerBtn"
+                        type="button"
+                        onClick={() => onOpenExplorer(t.explorerUrl!)}
+                      >
+                        View on Basescan
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
               </section>
