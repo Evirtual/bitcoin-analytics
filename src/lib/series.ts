@@ -77,3 +77,52 @@ export function computeRollingVolatility(points: CandlePoint[], range: CandleRan
 
   return out
 }
+
+export function computeMovingAverage(points: CandlePoint[], windowSize: number) {
+  return points.map((point, index) => {
+    const start = Math.max(0, index - windowSize + 1)
+    const slice = points.slice(start, index + 1).filter((p) => Number.isFinite(p.price))
+    const avg = slice.length ? slice.reduce((acc, p) => acc + p.price, 0) / slice.length : point.price
+    return {
+      ...point,
+      [`ma${windowSize}`]: Number.isFinite(avg) ? avg : point.price,
+    }
+  })
+}
+
+export function computePriceBands(points: CandlePoint[], windowSize: number) {
+  return points.map((point, index) => {
+    const start = Math.max(0, index - windowSize + 1)
+    const slice = points.slice(start, index + 1).map((p) => p.price).filter(Number.isFinite)
+    const avg = slice.length ? slice.reduce((acc, price) => acc + price, 0) / slice.length : point.price
+    const sd = stdev(slice)
+    return {
+      ...point,
+      mid: Number.isFinite(avg) ? avg : point.price,
+      upper: Number.isFinite(avg + sd * 2) ? avg + sd * 2 : point.price,
+      lower: Number.isFinite(avg - sd * 2) ? avg - sd * 2 : point.price,
+    }
+  })
+}
+
+export function computeNormalizedPerformance(
+  series: Array<{ assetKey: string; candles: CandlePoint[] | undefined }>,
+) {
+  const longest = series.reduce<CandlePoint[]>((acc, item) => {
+    const candles = item.candles ?? []
+    return candles.length > acc.length ? candles : acc
+  }, [])
+
+  return longest.map((point, index) => {
+    const row: Record<string, number | string> = { t: point.t }
+    for (const item of series) {
+      const candles = item.candles ?? []
+      const first = candles.find((p) => Number.isFinite(p.price) && p.price > 0)?.price
+      const current = candles[index]?.price
+      if (first && current !== undefined && Number.isFinite(current)) {
+        row[item.assetKey] = ((current - first) / first) * 100
+      }
+    }
+    return row
+  })
+}

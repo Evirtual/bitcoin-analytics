@@ -1,0 +1,65 @@
+import { Area, AreaChart, CartesianGrid, Line, Tooltip, XAxis, YAxis } from 'recharts'
+import type { CandlePoint, CandleRange } from './types'
+import { ChartFrame } from './ChartFrame'
+import { RangeToggle } from './range'
+import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
+import { usd } from '../../lib/format'
+import { computePriceBands } from '../../lib/series'
+
+export function PriceBandsChartCard({
+  assetKey,
+  range,
+  onRangeChange,
+  candles,
+  isLoading,
+}: {
+  assetKey: string
+  range: CandleRange
+  onRangeChange: (r: CandleRange) => void
+  candles: CandlePoint[] | undefined
+  isLoading: boolean
+}) {
+  const windowSize = range === '1D' ? 8 : range === '1W' ? 24 : 24 * 3
+  const series = candles ? computePriceBands(candles, windowSize) : []
+
+  return (
+    <div className="card">
+      <div className="cardHeader">
+        <h2>{assetKey} Bands</h2>
+        <RangeToggle value={range} onChange={onRangeChange} />
+      </div>
+
+      {series.length ? (
+        <ChartFrame fallback={<div className="empty">Loading chart...</div>}>
+          {({ width, height }) => {
+            const compact = width < 360
+            return (
+              <AreaChart width={width} height={height} data={series} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid stroke="var(--chartGrid)" />
+                <XAxis dataKey="t" tick={{ fontSize: compact ? 11 : 12, fill: 'var(--chartTick)' }} minTickGap={48} />
+                <YAxis tick={{ fontSize: compact ? 11 : 12, fill: 'var(--chartTick)' }} width={compact ? 56 : 72} />
+                <Tooltip
+                  contentStyle={tooltipContentStyle}
+                  labelStyle={tooltipLabelStyle}
+                  itemStyle={tooltipItemStyle}
+                  formatter={(value, name) => {
+                    const n = Number(value)
+                    return [Number.isFinite(n) ? usd.format(n) : String(value), String(name)]
+                  }}
+                />
+                <Area type="monotone" dataKey="upper" stroke="transparent" fill="var(--accent)" fillOpacity={0.1} name="Upper" />
+                <Area type="monotone" dataKey="lower" stroke="transparent" fill="var(--card2)" fillOpacity={1} name="Lower" />
+                <Line type="monotone" dataKey="price" dot={false} stroke="var(--accent)" strokeWidth={2} name="Price" />
+                <Line type="monotone" dataKey="mid" dot={false} stroke="var(--accent2)" strokeWidth={1.7} name="Mid" />
+              </AreaChart>
+            )
+          }}
+        </ChartFrame>
+      ) : (
+        <div className="chartWrap">
+          <div className="empty">{isLoading ? 'Loading chart...' : 'Band data unavailable'}</div>
+        </div>
+      )}
+    </div>
+  )
+}

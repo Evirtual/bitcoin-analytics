@@ -1,18 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
 import { useAssetBalances, useUserAssetTotals } from './hooks/useAssetBalances'
-import { useCandles, useChange24h, useSpotUsd, useSpotUsdMany } from './hooks/useMarket'
+import { useCandles, useCandlesMany, useChange24h, useSpotUsd, useSpotUsdMany } from './hooks/useMarket'
 import { useGasBalances } from './hooks/useGasBalances'
 import { AssetIcon } from './components/AssetIcon'
 import type { CandleRange } from './components/charts/types'
 import { rangeToDays } from './components/charts/rangeUtils'
-import { PriceChartCard } from './components/charts/PriceChartCard'
-import { VolumeChartCard } from './components/charts/VolumeChartCard'
-import { DrawdownChartCard } from './components/charts/DrawdownChartCard'
-import { VolatilityChartCard } from './components/charts/VolatilityChartCard'
-import { ReturnsChartCard } from './components/charts/ReturnsChartCard'
-import { PortfolioChartCard } from './components/charts/PortfolioChartCard'
 import { Header } from './components/dashboard/Header'
 import { MarketMoodCard } from './components/dashboard/MarketMoodCard'
 import { MarketDashboardMeta } from './components/dashboard/MarketDashboardMeta'
@@ -25,6 +19,86 @@ import { useTheme } from './hooks/useTheme'
 import { compact, usd } from './lib/format'
 import { formatConnectErrorMessage } from './lib/wallet'
 import './App.css'
+
+const PriceChartCard = lazy(() => import('./components/charts/PriceChartCard').then((m) => ({ default: m.PriceChartCard })))
+const VolumeChartCard = lazy(() => import('./components/charts/VolumeChartCard').then((m) => ({ default: m.VolumeChartCard })))
+const DrawdownChartCard = lazy(() => import('./components/charts/DrawdownChartCard').then((m) => ({ default: m.DrawdownChartCard })))
+const VolatilityChartCard = lazy(() => import('./components/charts/VolatilityChartCard').then((m) => ({ default: m.VolatilityChartCard })))
+const ReturnsChartCard = lazy(() => import('./components/charts/ReturnsChartCard').then((m) => ({ default: m.ReturnsChartCard })))
+const PortfolioChartCard = lazy(() => import('./components/charts/PortfolioChartCard').then((m) => ({ default: m.PortfolioChartCard })))
+const MovingAverageChartCard = lazy(() =>
+  import('./components/charts/MovingAverageChartCard').then((m) => ({ default: m.MovingAverageChartCard })),
+)
+const PriceBandsChartCard = lazy(() =>
+  import('./components/charts/PriceBandsChartCard').then((m) => ({ default: m.PriceBandsChartCard })),
+)
+const ReturnsHeatmapCard = lazy(() =>
+  import('./components/charts/ReturnsHeatmapCard').then((m) => ({ default: m.ReturnsHeatmapCard })),
+)
+const AssetComparisonChartCard = lazy(() =>
+  import('./components/charts/AssetComparisonChartCard').then((m) => ({ default: m.AssetComparisonChartCard })),
+)
+
+function ChartFallback() {
+  return (
+    <div className="card">
+      <div className="chartWrap">
+        <div className="empty">Loading chart...</div>
+      </div>
+    </div>
+  )
+}
+
+type MarketCardId =
+  | 'price'
+  | 'volume'
+  | 'returns'
+  | 'heatmap'
+  | 'trend'
+  | 'bands'
+  | 'drawdown'
+  | 'volatility'
+  | 'comparison'
+
+const DEFAULT_MARKET_CARD_ORDER: MarketCardId[] = [
+  'price',
+  'volume',
+  'returns',
+  'heatmap',
+  'trend',
+  'bands',
+  'drawdown',
+  'volatility',
+  'comparison',
+]
+
+const MARKET_CARD_STORAGE_KEY = 'bitcoin-analytics.marketCardOrder.v2'
+
+function readMarketCardOrder(): MarketCardId[] {
+  if (typeof window === 'undefined') return DEFAULT_MARKET_CARD_ORDER
+
+  try {
+    const raw = window.localStorage.getItem(MARKET_CARD_STORAGE_KEY)
+    if (!raw) return DEFAULT_MARKET_CARD_ORDER
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return DEFAULT_MARKET_CARD_ORDER
+    const valid = parsed.filter((id): id is MarketCardId => {
+      return DEFAULT_MARKET_CARD_ORDER.includes(id as MarketCardId)
+    })
+    const missing = DEFAULT_MARKET_CARD_ORDER.filter((id) => !valid.includes(id))
+    return [...valid, ...missing]
+  } catch {
+    return DEFAULT_MARKET_CARD_ORDER
+  }
+}
+
+function writeMarketCardOrder(order: MarketCardId[]) {
+  try {
+    window.localStorage.setItem(MARKET_CARD_STORAGE_KEY, JSON.stringify(order))
+  } catch {
+    // ignore localStorage failures
+  }
+}
 
 function getErrorMessage(err: unknown): string | undefined {
   if (!err) return undefined
@@ -56,33 +130,48 @@ function App() {
   const { disconnect } = useDisconnect()
 
   const [connectUiPending, setConnectUiPending] = useState(false)
+  const [dashboardView, setDashboardView] = useState<'market' | 'portfolio'>('market')
+  const [marketCardOrder, setMarketCardOrder] = useState<MarketCardId[]>(readMarketCardOrder)
+  const [draggedMarketCard, setDraggedMarketCard] = useState<MarketCardId | null>(null)
+  const [dragOverMarketCard, setDragOverMarketCard] = useState<MarketCardId | null>(null)
 
   const connectDisabled = isConnecting || connectUiPending
+  const activeDashboardView = isConnected ? dashboardView : 'market'
+
+  const moveMarketCard = useCallback((from: MarketCardId, to: MarketCardId) => {
+    if (from === to) return
+    setMarketCardOrder((prev) => {
+      const next = [...prev]
+      const fromIndex = next.indexOf(from)
+      const toIndex = next.indexOf(to)
+      if (fromIndex < 0 || toIndex < 0) return prev
+      next.splice(fromIndex, 1)
+      next.splice(toIndex, 0, from)
+      writeMarketCardOrder(next)
+      return next
+    })
+  }, [])
 
   const connectErrorText = useMemo(() => {
     const msg = getErrorMessage(connectError)
     return msg ? formatConnectErrorMessage(msg) : undefined
   }, [connectError])
 
-  const [connectToastOpen, setConnectToastOpen] = useState(false)
-  const [connectToastMessage, setConnectToastMessage] = useState<string | undefined>(undefined)
+  const [dismissedConnectError, setDismissedConnectError] = useState<string | undefined>(undefined)
+  const connectToastOpen = Boolean(connectErrorText && connectErrorText !== dismissedConnectError)
 
   useEffect(() => {
-    if (!connectErrorText) {
-      setConnectToastOpen(false)
-      return
-    }
-    setConnectToastMessage(connectErrorText)
-    setConnectToastOpen(true)
-    const t = window.setTimeout(() => setConnectToastOpen(false), 8000)
+    if (!connectToastOpen || !connectErrorText) return
+    const t = window.setTimeout(() => setDismissedConnectError(connectErrorText), 8000)
     return () => window.clearTimeout(t)
-  }, [connectErrorText])
+  }, [connectErrorText, connectToastOpen])
 
   const runConnect = useCallback(
     async (connector: (typeof connectors)[number]) => {
       if (connectDisabled) return
 
       setConnectUiPending(true)
+      setDismissedConnectError(undefined)
       try {
         if (connectAsync) {
           await connectAsync({ connector })
@@ -117,25 +206,36 @@ function App() {
   const [returnsRange, setReturnsRange] = useState<CandleRange>('1W')
   const [drawdownRange, setDrawdownRange] = useState<CandleRange>('1W')
   const [volRange, setVolRange] = useState<CandleRange>('1W')
-  const [portfolioRange, setPortfolioRange] = useState<CandleRange>('1W')
+  const [comparisonRange, setComparisonRange] = useState<CandleRange>('1W')
 
   const priceDays = useMemo(() => rangeToDays(priceRange) as 1 | 7 | 30, [priceRange])
   const volumeDays = useMemo(() => rangeToDays(volumeRange) as 1 | 7 | 30, [volumeRange])
   const returnsDays = useMemo(() => rangeToDays(returnsRange) as 1 | 7 | 30, [returnsRange])
   const drawdownDays = useMemo(() => rangeToDays(drawdownRange) as 1 | 7 | 30, [drawdownRange])
   const volDays = useMemo(() => rangeToDays(volRange) as 1 | 7 | 30, [volRange])
+  const comparisonDays = useMemo(() => rangeToDays(comparisonRange) as 1 | 7 | 30, [comparisonRange])
 
   const priceCandles = useCandles(assetKey, priceDays)
   const volumeCandles = useCandles(assetKey, volumeDays)
   const returnsCandles = useCandles(assetKey, returnsDays)
   const drawdownCandles = useCandles(assetKey, drawdownDays)
   const volCandles = useCandles(assetKey, volDays)
+  const comparisonCandles = useCandlesMany(['BTC', 'ETH', 'BNB'], comparisonDays)
 
   const balances = useAssetBalances(address, assetKey, chainIds)
   const gas = useGasBalances(address, chainIds)
 
   const portfolioUsd =
     spotUsd.data && balances.data ? spotUsd.data * balances.data.totalAmount : undefined
+
+  const selectedHoldingText = useMemo(() => {
+    if (!isConnected) return undefined
+    if (balances.isLoading) return 'Loading...'
+    if (!balances.data) return 'Wallet balance unavailable'
+    const unavailable = balances.data.errorCount > 0 ? 'Some networks unavailable' : undefined
+    const amount = `${balances.data.totalFormatted} ${assetKey}`
+    return unavailable ? `${amount} (${unavailable})` : amount
+  }, [assetKey, balances.data, balances.isLoading, isConnected])
 
   const portfolioByAsset = useMemo(() => {
     const totals = assetTotals.data ?? []
@@ -152,6 +252,22 @@ function App() {
     const totalUsd = items.reduce((acc, i) => acc + (Number.isFinite(i.usd) ? i.usd : 0), 0)
     return { items, totalUsd }
   }, [assetTotals.data, spotMany.data])
+
+  const portfolioAssetCount = useMemo(() => {
+    return portfolioByAsset.items.filter((item) => item.amount > 0).length
+  }, [portfolioByAsset.items])
+
+  const balanceIssueCount = useMemo(() => {
+    return (assetTotals.data ?? []).reduce((acc, item) => acc + (item.errorCount ?? 0), 0)
+  }, [assetTotals.data])
+
+  const gasSummary = useMemo(() => {
+    if (gas.isLoading) return 'Loading...'
+    if (!gas.data?.length) return 'Gas balances unavailable'
+    return gas.data
+      .map((g) => (g.error ? `${g.chainName} unavailable` : `${g.formatted} ${g.symbol} on ${g.chainName}`))
+      .join(' / ')
+  }, [gas.data, gas.isLoading])
 
   const [connectOpen, setConnectOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -215,6 +331,127 @@ function App() {
     })
   }, [heldSet, supportedAssetKeys])
 
+  const marketCards = useMemo<Record<MarketCardId, { wide?: boolean; node: React.ReactNode }>>(
+    () => ({
+      price: {
+        node: (
+          <PriceChartCard
+            assetKey={assetKey}
+            range={priceRange}
+            onRangeChange={setPriceRange}
+            candles={priceCandles.data}
+            isLoading={priceCandles.isLoading}
+          />
+        ),
+      },
+      volume: {
+        node: (
+          <VolumeChartCard
+            assetKey={assetKey}
+            range={volumeRange}
+            onRangeChange={setVolumeRange}
+            candles={volumeCandles.data}
+            isLoading={volumeCandles.isLoading}
+          />
+        ),
+      },
+      returns: {
+        node: (
+          <ReturnsChartCard
+            range={returnsRange}
+            onRangeChange={setReturnsRange}
+            candles={returnsCandles.data}
+            isLoading={returnsCandles.isLoading}
+          />
+        ),
+      },
+      heatmap: {
+        node: (
+          <ReturnsHeatmapCard
+            range={returnsRange}
+            onRangeChange={setReturnsRange}
+            candles={returnsCandles.data}
+            isLoading={returnsCandles.isLoading}
+          />
+        ),
+      },
+      trend: {
+        node: (
+          <MovingAverageChartCard
+            assetKey={assetKey}
+            range={priceRange}
+            onRangeChange={setPriceRange}
+            candles={priceCandles.data}
+            isLoading={priceCandles.isLoading}
+          />
+        ),
+      },
+      bands: {
+        node: (
+          <PriceBandsChartCard
+            assetKey={assetKey}
+            range={priceRange}
+            onRangeChange={setPriceRange}
+            candles={priceCandles.data}
+            isLoading={priceCandles.isLoading}
+          />
+        ),
+      },
+      drawdown: {
+        node: (
+          <DrawdownChartCard
+            assetKey={assetKey}
+            range={drawdownRange}
+            onRangeChange={setDrawdownRange}
+            candles={drawdownCandles.data}
+            isLoading={drawdownCandles.isLoading}
+          />
+        ),
+      },
+      volatility: {
+        node: (
+          <VolatilityChartCard
+            range={volRange}
+            onRangeChange={setVolRange}
+            candles={volCandles.data}
+            isLoading={volCandles.isLoading}
+          />
+        ),
+      },
+      comparison: {
+        node: (
+          <AssetComparisonChartCard
+            range={comparisonRange}
+            onRangeChange={setComparisonRange}
+            series={comparisonCandles.data}
+            isLoading={comparisonCandles.isLoading}
+          />
+        ),
+      },
+    }),
+    [
+      assetKey,
+      comparisonCandles.data,
+      comparisonCandles.isLoading,
+      comparisonRange,
+      drawdownCandles.data,
+      drawdownCandles.isLoading,
+      drawdownRange,
+      priceCandles.data,
+      priceCandles.isLoading,
+      priceRange,
+      returnsCandles.data,
+      returnsCandles.isLoading,
+      returnsRange,
+      volCandles.data,
+      volCandles.isLoading,
+      volRange,
+      volumeCandles.data,
+      volumeCandles.isLoading,
+      volumeRange,
+    ],
+  )
+
   return (
     <div
       className="page"
@@ -240,10 +477,10 @@ function App() {
       />
 
       <Toast
-        open={connectToastOpen && !!connectToastMessage}
+        open={connectToastOpen}
         variant="error"
-        message={connectToastMessage ?? ''}
-        onClose={() => setConnectToastOpen(false)}
+        message={connectErrorText ?? ''}
+        onClose={() => setDismissedConnectError(connectErrorText)}
       />
 
       <div className="toolbar">
@@ -264,13 +501,41 @@ function App() {
         <MarketDashboardMeta isRefreshing={assetTotals.isLoading} />
       </div>
 
+      {isConnected ? (
+        <div className="viewBar">
+          <div className="segmented viewSwitch" role="tablist" aria-label="Dashboard view">
+            <button
+              className={activeDashboardView === 'market' ? 'segBtn segBtnActive' : 'segBtn'}
+              type="button"
+              onClick={() => setDashboardView('market')}
+              aria-selected={activeDashboardView === 'market'}
+            >
+              Market
+            </button>
+            <button
+              className={activeDashboardView === 'portfolio' ? 'segBtn segBtnActive' : 'segBtn'}
+              type="button"
+              onClick={() => setDashboardView('portfolio')}
+              aria-selected={activeDashboardView === 'portfolio'}
+            >
+              Portfolio
+            </button>
+          </div>
+          <div className="viewHint muted small">
+            {activeDashboardView === 'market' ? 'Global market analytics' : 'Connected wallet analytics'}
+          </div>
+        </div>
+      ) : null}
+
+      {activeDashboardView === 'market' ? (
+        <>
       <div className="kpiGrid">
         <MarketMoodCard />
 
         <div className="kpiCard">
           <div className="kpiLabel">{assetKey} Price</div>
           <div className="kpiValue">
-            {spotUsd.data ? `$${spotUsd.data.toLocaleString()}` : spotUsd.isLoading ? 'Loading…' : '—'}
+            {spotUsd.data ? `$${spotUsd.data.toLocaleString()}` : spotUsd.isLoading ? 'Loading...' : '-'}
           </div>
           <div className="kpiSub">
             {change24h.data !== undefined ? (
@@ -279,7 +544,27 @@ function App() {
                 {change24h.data.toFixed(2)}% (24h)
               </span>
             ) : (
-              <span className="muted">—</span>
+              <span className="muted">-</span>
+            )}
+          </div>
+        </div>
+
+        <div className="kpiCard">
+          <div className="kpiLabel">Momentum</div>
+          <div className="kpiValue">
+            {change24h.data !== undefined && periodReturn !== undefined
+              ? `${change24h.data + periodReturn >= 0 ? '+' : ''}${(change24h.data + periodReturn).toFixed(2)}%`
+              : change24h.isLoading || priceCandles.isLoading
+                ? 'Loading...'
+                : '-'}
+          </div>
+          <div className="kpiSub">
+            {change24h.data !== undefined && periodReturn !== undefined ? (
+              <span className={change24h.data + periodReturn >= 0 ? 'pos' : 'neg'}>
+                24h + selected range
+              </span>
+            ) : (
+              <span className="muted">-</span>
             )}
           </div>
         </div>
@@ -290,11 +575,11 @@ function App() {
             {range7d
               ? `${range7d.pct.toFixed(2)}%`
               : priceCandles.isLoading
-                ? 'Loading…'
-                : '—'}
+                ? 'Loading...'
+                : '-'}
           </div>
           <div className="kpiSub muted">
-            {range7d ? `$${Math.round(range7d.lo).toLocaleString()} → $${Math.round(range7d.hi).toLocaleString()}` : '—'}
+            {range7d ? `$${Math.round(range7d.lo).toLocaleString()} → $${Math.round(range7d.hi).toLocaleString()}` : '-'}
           </div>
         </div>
 
@@ -304,8 +589,8 @@ function App() {
             {priceCandles.data
               ? `${priceCandles.data.length}`
               : priceCandles.isLoading
-                ? 'Loading…'
-                : '—'}
+                ? 'Loading...'
+                : '-'}
           </div>
           <div className="kpiSub muted">Hourly candles</div>
         </div>
@@ -316,8 +601,8 @@ function App() {
             {periodReturn !== undefined
               ? `${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%`
               : priceCandles.isLoading
-                ? 'Loading…'
-                : '—'}
+                ? 'Loading...'
+                : '-'}
           </div>
           <div className="kpiSub">
             {periodReturn !== undefined ? (
@@ -325,22 +610,11 @@ function App() {
                 {periodReturn >= 0 ? 'Uptrend' : 'Downtrend'}
               </span>
             ) : (
-              <span className="muted">—</span>
+              <span className="muted">-</span>
             )}
           </div>
         </div>
 
-        <div className="kpiCard">
-          <div className="kpiLabel">Portfolio (selected)</div>
-          <div className="kpiValue">
-            {isConnected && portfolioUsd !== undefined
-              ? `$${Math.round(portfolioUsd).toLocaleString()}`
-              : '—'}
-          </div>
-          <div className="kpiSub">
-            <span className="muted">Shown in account popup</span>
-          </div>
-        </div>
 
         <div className="kpiCard">
           <div className="kpiLabel">Avg Volume ({volumeRange})</div>
@@ -348,66 +622,152 @@ function App() {
             {avgVolume !== undefined
               ? compact.format(avgVolume)
               : volumeCandles.isLoading
-                ? 'Loading…'
-                : '—'}
+                ? 'Loading...'
+                : '-'}
           </div>
           <div className="kpiSub muted">Per hour</div>
         </div>
       </div>
 
-      <section className="grid2">
-        <PriceChartCard
-          assetKey={assetKey}
-          range={priceRange}
-          onRangeChange={setPriceRange}
-          candles={priceCandles.data}
-          isLoading={priceCandles.isLoading}
-        />
-        <VolumeChartCard
-          assetKey={assetKey}
-          range={volumeRange}
-          onRangeChange={setVolumeRange}
-          candles={volumeCandles.data}
-          isLoading={volumeCandles.isLoading}
-        />
-      </section>
+      <Suspense fallback={<ChartFallback />}>
+        <section
+          className="marketGrid"
+          aria-label="Customizable market charts"
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              setDragOverMarketCard(null)
+            }
+          }}
+        >
+          {marketCardOrder.map((cardId) => {
+            const card = marketCards[cardId]
+            return (
+              <div
+                key={cardId}
+                className={[
+                  'marketTile',
+                  card.wide ? 'marketTileWide' : '',
+                  draggedMarketCard === cardId ? 'marketTileDragging' : '',
+                  dragOverMarketCard === cardId ? 'marketTileDragOver' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                draggable
+                title="Drag to reorder"
+                onDragStart={(event) => {
+                  setDraggedMarketCard(cardId)
+                  event.dataTransfer.effectAllowed = 'move'
+                  event.dataTransfer.setData('text/plain', cardId)
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault()
+                  setDragOverMarketCard(cardId)
+                }}
+                onDragLeave={() => setDragOverMarketCard((current) => (current === cardId ? null : current))}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  if (draggedMarketCard) moveMarketCard(draggedMarketCard, cardId)
+                  setDraggedMarketCard(null)
+                  setDragOverMarketCard(null)
+                }}
+                onDragEnd={() => {
+                  setDraggedMarketCard(null)
+                  setDragOverMarketCard(null)
+                }}
+              >
+                {card.node}
+              </div>
+            )
+          })}
+        </section>
+      </Suspense>
+        </>
+      ) : (
+        <>
+          <div className="portfolioSummary">
+            <div className="kpiCard portfolioHero">
+              <div className="kpiLabel">Portfolio Total</div>
+              <div className="kpiValue">{usd.format(portfolioByAsset.totalUsd)}</div>
+              <div className="kpiSub muted">
+                {portfolioAssetCount
+                  ? `${portfolioAssetCount} supported asset${portfolioAssetCount === 1 ? '' : 's'} detected`
+                  : 'No supported assets detected yet'}
+              </div>
+            </div>
 
-      <section className="grid2">
-        <DrawdownChartCard
-          assetKey={assetKey}
-          range={drawdownRange}
-          onRangeChange={setDrawdownRange}
-          candles={drawdownCandles.data}
-          isLoading={drawdownCandles.isLoading}
-        />
-        <VolatilityChartCard
-          range={volRange}
-          onRangeChange={setVolRange}
-          candles={volCandles.data}
-          isLoading={volCandles.isLoading}
-        />
-      </section>
+            <div className="kpiCard portfolioGasCard">
+              <div className="kpiLabel">Selected Holding</div>
+              <div className="kpiValue">{portfolioUsd !== undefined ? usd.format(portfolioUsd) : '-'}</div>
+              <div className="kpiSub muted">{selectedHoldingText ?? '-'}</div>
+            </div>
 
-      <section className="grid1">
-        <ReturnsChartCard
-          range={returnsRange}
-          onRangeChange={setReturnsRange}
-          candles={returnsCandles.data}
-          isLoading={returnsCandles.isLoading}
-        />
-      </section>
+            <div className="kpiCard">
+              <div className="kpiLabel">Network Status</div>
+              <div className="kpiValue">{balanceIssueCount ? `${balanceIssueCount}` : 'OK'}</div>
+              <div className="kpiSub muted">
+                {balanceIssueCount ? 'Some balance reads are incomplete' : 'Balance reads completed'}
+              </div>
+            </div>
 
-      <section className="grid1">
-        {isConnected ? (
-          <PortfolioChartCard
-            range={portfolioRange}
-            onRangeChange={setPortfolioRange}
-            items={portfolioByAsset.items}
-            isLoading={assetTotals.isLoading || spotMany.isLoading}
-            totalUsd={portfolioByAsset.totalUsd}
-          />
-        ) : null}
-      </section>
+            <div className="kpiCard">
+              <div className="kpiLabel">Gas</div>
+              <div className="kpiValue">{gas.isLoading ? 'Loading...' : gas.data?.length ? `${gas.data.length}` : '-'}</div>
+              <div className="kpiSub muted">{gasSummary}</div>
+            </div>
+          </div>
+
+          <Suspense fallback={<ChartFallback />}>
+            <section className="grid2">
+              <PortfolioChartCard
+                items={portfolioByAsset.items}
+                isLoading={assetTotals.isLoading || spotMany.isLoading}
+                totalUsd={portfolioByAsset.totalUsd}
+              />
+              <div className="card">
+                <div className="cardHeader">
+                  <h2>Wallet Actions</h2>
+                </div>
+                <div className="portfolioActions">
+                  <button className="btn btnPrimary" type="button" onClick={() => setAccountOpen(true)}>
+                    Open Account Details
+                  </button>
+                  <button className="btn" type="button" onClick={() => setSwapOpen(true)}>
+                    Swap Selected Asset
+                  </button>
+                  <button
+                    className="btn"
+                    type="button"
+                    onClick={() => {
+                      void assetTotals.refetch()
+                      void gas.refetch()
+                      void balances.refetch()
+                    }}
+                    disabled={assetTotals.isRefetching || gas.isRefetching || balances.isRefetching}
+                  >
+                    {assetTotals.isRefetching || gas.isRefetching || balances.isRefetching
+                      ? 'Refreshing...'
+                      : 'Refresh Portfolio'}
+                  </button>
+                </div>
+                <div className="portfolioActionMeta">
+                  <div>
+                    <span className="muted small">Selected</span>
+                    <strong>{assetKey}</strong>
+                  </div>
+                  <div>
+                    <span className="muted small">Assets</span>
+                    <strong>{portfolioAssetCount || 0}</strong>
+                  </div>
+                  <div>
+                    <span className="muted small">Networks</span>
+                    <strong>{balanceIssueCount ? 'Partial' : 'OK'}</strong>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </Suspense>
+        </>
+      )}
 
       <SupportDeveloperModal open={supportOpen} onClose={() => setSupportOpen(false)} />
 
@@ -441,9 +801,14 @@ function App() {
           setAccountOpen(false)
           void runConnect(c)
         }}
-        gas={{ isLoading: gas.isLoading, data: gas.data }}
+        gas={{ isLoading: gas.isLoading, isRefetching: gas.isRefetching, data: gas.data, refetch: gas.refetch }}
         onDisconnect={() => disconnect()}
-        assetTotals={{ isLoading: assetTotals.isLoading, data: assetTotals.data }}
+        assetTotals={{
+          isLoading: assetTotals.isLoading,
+          isRefetching: assetTotals.isRefetching,
+          data: assetTotals.data,
+          refetch: assetTotals.refetch,
+        }}
         spotMany={spotMany}
         chainIds={chainIds}
         portfolioTotalUsd={portfolioByAsset.totalUsd}

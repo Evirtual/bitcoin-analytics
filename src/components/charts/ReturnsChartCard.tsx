@@ -26,7 +26,7 @@ export function ReturnsChartCard({
       </div>
 
       {dailyReturns.length ? (
-        <ChartFrame style={{ height: '16.25em' }} fallback={<div className="empty">Loading…</div>}>
+        <ChartFrame fallback={<div className="empty">Loading...</div>}>
           {({ width, height }) => {
             const compactView = width < 360
             const tickFontSize = compactView ? 11 : 12
@@ -67,7 +67,7 @@ export function ReturnsChartCard({
         </ChartFrame>
       ) : (
         <div className="chartWrap">
-          <div className="empty">{isLoading ? 'Loading…' : 'Data unavailable'}</div>
+          <div className="empty">{isLoading ? 'Loading...' : 'Data unavailable'}</div>
         </div>
       )}
     </div>

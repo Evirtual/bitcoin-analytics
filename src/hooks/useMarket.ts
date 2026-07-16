@@ -272,6 +272,23 @@ export function useCandles(assetKey: AssetKey, days: 1 | 7 | 30) {
   })
 }
 
+export function useCandlesMany(assetKeys: AssetKey[], days: 1 | 7 | 30) {
+  const queries = useQueries({
+    queries: assetKeys.map((assetKey) => ({
+      queryKey: ['market', 'candles', assetKey, `${days}d`],
+      queryFn: ({ signal }: { signal?: AbortSignal }) => fetchCandlesWithFallback(assetKey, days, signal),
+      staleTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    })),
+  })
+
+  return {
+    isLoading: queries.some((q) => q.isLoading),
+    data: assetKeys.map((assetKey, index) => ({ assetKey, candles: queries[index]?.data })),
+  }
+}
+
 export function useChange24h(assetKey: AssetKey) {
   return useQuery({
     queryKey: ['market', 'change', assetKey, '24h'],

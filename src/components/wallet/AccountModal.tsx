@@ -8,9 +8,9 @@ import { Modal } from '../Modal'
 import { AssetIcon } from '../AssetIcon'
 import { ConnectorList } from './ConnectorList'
 
-type GasRow = { chainName: string; formatted: string; symbol: string }
+type GasRow = { chainName: string; formatted: string; symbol: string; error?: string }
 
-type AssetTotal = { assetKey: AssetKey; totalAmount: number }
+type AssetTotal = { assetKey: AssetKey; totalAmount: number; errorCount?: number }
 
 function AssetBalanceDetails({
   address,
@@ -29,23 +29,32 @@ function AssetBalanceDetails({
   if (!q.data) return <div className="assetDetails muted">Network balances unavailable.</div>
 
   const rows = q.data.byChain.filter((r) => r.supported)
+  const hasErrors = rows.some((r) => r.error)
 
   return (
     <div className="assetDetails">
       <div className="assetDetailsHeader muted small">Per network</div>
       <div className="assetDetailsGrid">
+        {hasErrors ? <div className="muted small">Some networks could not be reached.</div> : null}
         {rows.length ? (
           rows.map((r) => {
             const usdValue = priceUsd !== undefined ? priceUsd * r.amount : undefined
             return (
               <div key={r.chainId} className="assetDetailsRow">
                 <div className="assetDetailsLeft">
-                  <div className="assetDetailsChain">{r.chainName}</div>
+                  <div className="assetDetailsChain">
+                    {r.chainName}
+                    <span className={`statusChip statusChip${r.status === 'ok' ? 'Ok' : r.status === 'partial' ? 'Warn' : 'Bad'}`}>
+                      {r.status === 'ok' ? 'OK' : r.status === 'partial' ? 'Partial' : 'Unavailable'}
+                    </span>
+                  </div>
                   <div className="assetDetailsMeta muted small">{r.tokenSymbol}</div>
                 </div>
                 <div className="assetDetailsRight">
                   <div className="mono">{r.formatted}</div>
-                  <div className="muted small">{usdValue !== undefined ? usd.format(usdValue) : '—'}</div>
+                  <div className="muted small">
+                    {r.error ? r.error : usdValue !== undefined ? usd.format(usdValue) : '—'}
+                  </div>
                 </div>
               </div>
             )
@@ -80,9 +89,9 @@ export function AccountModal<T extends { uid: string; name: string }>({
   connectors: readonly T[]
   disabled: boolean
   onSelectConnector: (connector: T) => void
-  gas: { isLoading: boolean; data: GasRow[] | undefined }
+  gas: { isLoading: boolean; isRefetching?: boolean; data: GasRow[] | undefined; refetch?: () => unknown }
   onDisconnect: () => void
-  assetTotals: { isLoading: boolean; data: AssetTotal[] | undefined }
+  assetTotals: { isLoading: boolean; isRefetching?: boolean; data: AssetTotal[] | undefined; refetch?: () => unknown }
   spotMany: { isLoading: boolean; data: Map<AssetKey, number> }
   chainIds: ChainId[]
   portfolioTotalUsd: number
@@ -99,6 +108,17 @@ export function AccountModal<T extends { uid: string; name: string }>({
     const rows = assetTotals.data ?? []
     return rows.filter((a) => a.totalAmount > 0)
   }, [assetTotals.data])
+
+  const balanceReadsHadErrors = useMemo(() => {
+    return (assetTotals.data ?? []).some((a) => (a.errorCount ?? 0) > 0)
+  }, [assetTotals.data])
+
+  const refreshBalances = () => {
+    void gas.refetch?.()
+    void assetTotals.refetch?.()
+  }
+
+  const isRefreshingBalances = Boolean(gas.isRefetching || assetTotals.isRefetching)
 
   const copyAddress = async () => {
     if (!address) return
@@ -157,14 +177,21 @@ export function AccountModal<T extends { uid: string; name: string }>({
             {gas.isLoading
                 ? 'Loading…'
                 : gas.data
-                ? gas.data.map((g) => `${g.chainName} ${g.formatted} ${g.symbol}`).join(' • ')
+                ? gas.data
+                    .map((g) => (g.error ? `${g.chainName} unavailable` : `${g.chainName} ${g.formatted} ${g.symbol}`))
+                    .join(' • ')
                 : 'Unavailable'}
             </div>
           </div>
 
           <div className="divider" />
 
-          <div className="muted small">Balances (supported assets)</div>
+          <div className="balanceHeader">
+            <div className="muted small">Balances (supported assets)</div>
+            <button className="btn balanceRefreshBtn" type="button" onClick={refreshBalances} disabled={isRefreshingBalances}>
+              {isRefreshingBalances ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
 
           <div className="assetList">
             {assetTotals.isLoading || spotMany.isLoading ? (
@@ -229,7 +256,11 @@ export function AccountModal<T extends { uid: string; name: string }>({
                 )
               })
             ) : (
-              <div className="muted">No supported assets detected.</div>
+              <div className="muted">
+                {balanceReadsHadErrors
+                  ? 'No supported assets detected. Some networks were unavailable, so balances may be incomplete.'
+                  : 'No supported assets detected.'}
+              </div>
             )}
           </div>
 

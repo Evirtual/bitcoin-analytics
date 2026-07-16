@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { createPublicClient, formatUnits, http, type Address } from 'viem'
-import { base, bsc, mainnet } from 'viem/chains'
+import { formatUnits, type Address } from 'viem'
 import type { ChainId } from '../assets/catalog'
+import { getChainName, getClient, getGasSymbol, getRpcErrorMessage } from '../lib/rpc'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -40,27 +40,6 @@ function retryDelayMs(failureCount: number, err: unknown) {
   return Math.min(10_000, 1_000 * 2 ** failureCount)
 }
 
-function getClient(chainId: ChainId) {
-  const mainnetRpc = import.meta.env.VITE_RPC_MAINNET as string | undefined
-  const baseRpc = import.meta.env.VITE_RPC_BASE as string | undefined
-  const bscRpc = import.meta.env.VITE_RPC_BSC as string | undefined
-
-  if (chainId === 1) return createPublicClient({ chain: mainnet, transport: http(mainnetRpc) })
-  if (chainId === 8453) return createPublicClient({ chain: base, transport: http(baseRpc) })
-  return createPublicClient({ chain: bsc, transport: http(bscRpc) })
-}
-
-function gasSymbol(chainId: ChainId) {
-  if (chainId === 56) return 'BNB'
-  return 'ETH'
-}
-
-function chainName(chainId: ChainId) {
-  if (chainId === 1) return 'Ethereum'
-  if (chainId === 8453) return 'Base'
-  return 'BSC'
-}
-
 export function useGasBalances(address: Address | undefined, chainIds: ChainId[]) {
   return useQuery({
     queryKey: ['balances', 'gas', address, chainIds],
@@ -68,22 +47,34 @@ export function useGasBalances(address: Address | undefined, chainIds: ChainId[]
     queryFn: async () => {
       if (!address) throw new Error('No address')
 
-      const rows: Array<{ chainId: ChainId; chainName: string; symbol: string; amount: number }> = []
-      for (const chainId of chainIds) {
-        const client = getClient(chainId)
-        const bal = await client.getBalance({ address })
-        const amount = Number(formatUnits(bal, 18))
-        rows.push({
-          chainId,
-          chainName: chainName(chainId),
-          symbol: gasSymbol(chainId),
-          amount: Number.isFinite(amount) ? amount : 0,
-        })
-      }
+      const rows = await Promise.all(
+        chainIds.map(async (chainId) => {
+          try {
+            const client = getClient(chainId)
+            const bal = await client.getBalance({ address })
+            const amount = Number(formatUnits(bal, 18))
+            return {
+              chainId,
+              chainName: getChainName(chainId),
+              symbol: getGasSymbol(chainId),
+              amount: Number.isFinite(amount) ? amount : 0,
+              error: undefined,
+            }
+          } catch (err) {
+            return {
+              chainId,
+              chainName: getChainName(chainId),
+              symbol: getGasSymbol(chainId),
+              amount: 0,
+              error: getRpcErrorMessage(err),
+            }
+          }
+        }),
+      )
 
       return rows.map((r) => ({
         ...r,
-        formatted: r.amount.toLocaleString(undefined, { maximumFractionDigits: 6 }),
+        formatted: r.error ? 'Unavailable' : r.amount.toLocaleString(undefined, { maximumFractionDigits: 6 }),
       }))
     },
     staleTime: 2 * 60_000,

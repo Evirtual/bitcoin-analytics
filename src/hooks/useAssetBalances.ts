@@ -1,7 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { createPublicClient, formatUnits, http, type Address } from 'viem'
-import { base, bsc, mainnet } from 'viem/chains'
-import { ASSETS, CHAINS, type AssetKey, type ChainId } from '../assets/catalog'
+import { formatUnits, type Address } from 'viem'
+import { ASSETS, type AssetKey, type AssetOnChain, type ChainId } from '../assets/catalog'
+import { getChainName, getClient, getRpcErrorMessage } from '../lib/rpc'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -50,77 +50,107 @@ const erc20Abi = [
   },
 ] as const
 
-function getClient(chainId: ChainId) {
-  const mainnetRpc = import.meta.env.VITE_RPC_MAINNET as string | undefined
-  const baseRpc = import.meta.env.VITE_RPC_BASE as string | undefined
-  const bscRpc = import.meta.env.VITE_RPC_BSC as string | undefined
+export type AssetTotal = { assetKey: AssetKey; totalAmount: number; errorCount: number }
 
-  if (chainId === 1) return createPublicClient({ chain: mainnet, transport: http(mainnetRpc) })
-  if (chainId === 8453) return createPublicClient({ chain: base, transport: http(baseRpc) })
-  return createPublicClient({ chain: bsc, transport: http(bscRpc) })
+function successfulAmount(balance: bigint, decimals: number) {
+  const amount = Number(formatUnits(balance, decimals))
+  return Number.isFinite(amount) ? amount : 0
 }
 
 export async function fetchAssetBalances(address: Address, assetKey: AssetKey, chainIds: ChainId[]) {
   const asset = ASSETS[assetKey]
-  const rows: Array<{
-    chainId: ChainId
-    chainName: string
-    supported: boolean
-    tokenSymbol: string
-    amount: number
-  }> = []
 
-  const chainName = (chainId: ChainId) => CHAINS.find((c) => c.id === chainId)?.name ?? String(chainId)
-
-  const toDefs = (value: (typeof asset.perChain)[ChainId] | undefined) => {
-    if (!value) return [] as const
+  const toDefs = (value: (typeof asset.perChain)[ChainId] | undefined): AssetOnChain[] => {
+    if (!value) return []
     return Array.isArray(value) ? value : [value]
   }
 
-  for (const chainId of chainIds) {
-    const defs = toDefs(asset.perChain[chainId])
-    if (!defs.length) {
-      rows.push({
-        chainId,
-        chainName: chainName(chainId),
-        supported: false,
-        tokenSymbol: '—',
-        amount: 0,
-      })
-      continue
-    }
-
-    const client = getClient(chainId)
-
-    let sum = 0
-    for (const def of defs) {
-      if (def.kind === 'native') {
-        const bal = await client.getBalance({ address })
-        const amount = Number(formatUnits(bal, def.decimals))
-        sum += Number.isFinite(amount) ? amount : 0
-        continue
+  const rows = await Promise.all(
+    chainIds.map(async (chainId) => {
+      const defs = toDefs(asset.perChain[chainId])
+      if (!defs.length) {
+        return {
+          chainId,
+          chainName: getChainName(chainId),
+          supported: false,
+          tokenSymbol: '—',
+          amount: 0,
+          error: undefined,
+        }
       }
 
-      const bal = await client.readContract({
-        address: def.address,
-        abi: erc20Abi,
-        functionName: 'balanceOf',
-        args: [address],
-      })
-      const amount = Number(formatUnits(bal, def.decimals))
-      sum += Number.isFinite(amount) ? amount : 0
-    }
+      const client = getClient(chainId)
+      const balances: Array<{ amount: number; error: string | undefined }> = defs.map(() => ({
+        amount: 0,
+        error: undefined,
+      }))
 
-    // If multiple representations exist (e.g. native + wrapped), show the canonical asset key.
-    const tokenSymbol = defs.length > 1 ? assetKey : defs[0]!.symbol
-    rows.push({
-      chainId,
-      chainName: chainName(chainId),
-      supported: true,
-      tokenSymbol,
-      amount: sum,
-    })
-  }
+      await Promise.all([
+        Promise.all(
+          defs.map(async (def, index) => {
+            if (def.kind !== 'native') return
+            try {
+              const bal = await client.getBalance({ address })
+              balances[index] = { amount: successfulAmount(bal, def.decimals), error: undefined }
+            } catch (err) {
+              balances[index] = { amount: 0, error: getRpcErrorMessage(err) }
+            }
+          }),
+        ),
+        (async () => {
+          const erc20Defs = defs
+            .map((def, index) => ({ def, index }))
+            .filter((item): item is { def: Extract<AssetOnChain, { kind: 'erc20' }>; index: number } => {
+              return item.def.kind === 'erc20'
+            })
+
+          if (!erc20Defs.length) return
+
+          try {
+            const results = await client.multicall({
+              allowFailure: true,
+              contracts: erc20Defs.map(({ def }) => ({
+                address: def.address,
+                abi: erc20Abi,
+                functionName: 'balanceOf',
+                args: [address],
+              })),
+            })
+
+            results.forEach((result, resultIndex) => {
+              const { def, index } = erc20Defs[resultIndex]!
+              if (result.status === 'success') {
+                balances[index] = {
+                  amount: successfulAmount(result.result, def.decimals),
+                  error: undefined,
+                }
+              } else {
+                balances[index] = { amount: 0, error: getRpcErrorMessage(result.error) }
+              }
+            })
+          } catch (err) {
+            const message = getRpcErrorMessage(err)
+            for (const { index } of erc20Defs) {
+              balances[index] = { amount: 0, error: message }
+            }
+          }
+        })(),
+      ])
+
+      const amount = balances.reduce((acc, r) => acc + r.amount, 0)
+      const errors = balances.map((r) => r.error).filter((msg): msg is string => Boolean(msg))
+
+      return {
+        chainId,
+        chainName: getChainName(chainId),
+        supported: true,
+        tokenSymbol: defs.length > 1 ? assetKey : defs[0]!.symbol,
+        amount,
+        error: errors.length === defs.length ? errors[0] : undefined,
+        status: errors.length === 0 ? 'ok' : errors.length === defs.length ? 'unavailable' : 'partial',
+      }
+    }),
+  )
 
   const byChain = rows.map((r) => ({
     chainId: r.chainId,
@@ -128,15 +158,28 @@ export async function fetchAssetBalances(address: Address, assetKey: AssetKey, c
     supported: r.supported,
     tokenSymbol: r.tokenSymbol,
     amount: r.amount,
-    formatted: r.amount.toLocaleString(undefined, { maximumFractionDigits: 8 }),
+    formatted: r.error ? 'Unavailable' : r.amount.toLocaleString(undefined, { maximumFractionDigits: 8 }),
+    error: r.error,
+    status: r.status ?? (r.supported ? 'ok' : 'unsupported'),
   }))
 
   const totalAmount = byChain.filter((r) => r.supported).reduce((acc, r) => acc + r.amount, 0)
+  const errorCount = byChain.filter((r) => r.supported && r.error).length
 
   return {
     byChain,
     totalAmount,
     totalFormatted: totalAmount.toLocaleString(undefined, { maximumFractionDigits: 8 }),
+    errorCount,
+  }
+}
+
+async function fetchAssetTotal(address: Address, assetKey: AssetKey, chainIds: ChainId[]): Promise<AssetTotal> {
+  try {
+    const res = await fetchAssetBalances(address, assetKey, chainIds)
+    return { assetKey, totalAmount: res.totalAmount, errorCount: res.errorCount }
+  } catch {
+    return { assetKey, totalAmount: 0, errorCount: chainIds.length }
   }
 }
 
@@ -162,9 +205,8 @@ export function useUserNonZeroAssets(address: Address | undefined, chainIds: Cha
       queryKey: ['balances', 'probe', assetKey, address, chainIds],
       enabled: Boolean(address) && chainIds.length > 0,
       queryFn: async () => {
-        if (!address) return { assetKey, totalAmount: 0 }
-        const res = await fetchAssetBalances(address, assetKey, chainIds)
-        return { assetKey, totalAmount: res.totalAmount }
+        if (!address) return { assetKey, totalAmount: 0, errorCount: 0 }
+        return fetchAssetTotal(address, assetKey, chainIds)
       },
       staleTime: 30_000,
     })),
@@ -173,9 +215,8 @@ export function useUserNonZeroAssets(address: Address | undefined, chainIds: Cha
   const isLoading = queries.some((q) => q.isLoading)
   const data = queries
     .map((q) => q.data)
-    .filter(Boolean)
-    .filter((d) => (d as { totalAmount: number }).totalAmount > 0)
-    .map((d) => d as { assetKey: AssetKey; totalAmount: number })
+    .filter((d): d is AssetTotal => Boolean(d))
+    .filter((d) => d.totalAmount > 0)
     .sort((a, b) => b.totalAmount - a.totalAmount)
 
   return { isLoading, data }
@@ -186,13 +227,8 @@ export function useUserAssetTotals(address: Address | undefined, chainIds: Chain
     queryKey: ['balances', 'totals', address, chainIds, assetKeys],
     enabled: Boolean(address) && chainIds.length > 0 && assetKeys.length > 0,
     queryFn: async () => {
-      if (!address) return [] as Array<{ assetKey: AssetKey; totalAmount: number }>
-      const rows: Array<{ assetKey: AssetKey; totalAmount: number }> = []
-      for (const assetKey of assetKeys) {
-        const res = await fetchAssetBalances(address, assetKey, chainIds)
-        rows.push({ assetKey, totalAmount: res.totalAmount })
-      }
-      return rows
+      if (!address) return [] as AssetTotal[]
+      return Promise.all(assetKeys.map((assetKey) => fetchAssetTotal(address, assetKey, chainIds)))
     },
     staleTime: 2 * 60_000,
     refetchInterval: false,
@@ -201,5 +237,10 @@ export function useUserAssetTotals(address: Address | undefined, chainIds: Chain
     retryDelay: (failureCount, err) => retryDelayMs(failureCount, err),
   })
 
-  return { isLoading: q.isLoading, data: q.data ?? [] }
+  return {
+    isLoading: q.isLoading,
+    isRefetching: q.isRefetching,
+    data: q.data ?? [],
+    refetch: q.refetch,
+  }
 }

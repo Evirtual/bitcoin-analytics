@@ -1,81 +1,98 @@
-import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts'
-import type { CandleRange } from './types'
-import { ChartFrame } from './ChartFrame'
-import { RangeToggle } from './range'
-import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
+import { Cell, Pie, PieChart, Tooltip } from 'recharts'
+import { ASSETS, type AssetKey } from '../../assets/catalog'
 import { usd } from '../../lib/format'
+import { ChartFrame } from './ChartFrame'
+import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 
 export type PortfolioItem = {
-  assetKey: string
+  assetKey: AssetKey
+  amount: number
   usd: number
+  usdLabel?: string
 }
 
 export function PortfolioChartCard({
-  range,
-  onRangeChange,
   items,
   isLoading,
   totalUsd,
 }: {
-  range: CandleRange
-  onRangeChange: (r: CandleRange) => void
   items: PortfolioItem[] | undefined
   isLoading: boolean
   totalUsd: number
 }) {
+  const data = (items ?? [])
+    .filter((item) => Number.isFinite(item.usd) && item.usd > 0)
+    .map((item) => ({
+      ...item,
+      label: item.assetKey,
+      percent: totalUsd > 0 ? (item.usd / totalUsd) * 100 : 0,
+    }))
+
   return (
     <div className="card">
       <div className="cardHeader">
         <h2>Portfolio Allocation</h2>
-        <RangeToggle value={range} onChange={onRangeChange} />
+        <div className="muted small">{usd.format(totalUsd)}</div>
       </div>
 
       {isLoading ? (
-        <div className="chartWrap" style={{ height: '16.25em' }}>
-          <div className="empty">Loading…</div>
+        <div className="chartWrap" style={{ height: '17.25em' }}>
+          <div className="empty">Loading...</div>
         </div>
-      ) : items?.length ? (
-        <ChartFrame style={{ height: '16.25em' }} fallback={<div className="empty">Loading…</div>}>
-          {({ width, height }) => {
-            const compactView = width < 360
-            const tickFontSize = compactView ? 11 : 12
-            const yAxisWidth = compactView ? 56 : 72
-
-            return (
-              <BarChart
-                width={width}
-                height={height}
-                data={items}
-                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid stroke="var(--chartGrid)" />
-                <XAxis dataKey="assetKey" tick={{ fontSize: tickFontSize, fill: 'var(--chartTick)' }} />
-                <YAxis
-                  tick={{ fontSize: tickFontSize, fill: 'var(--chartTick)' }}
-                  axisLine={{ stroke: 'var(--chartAxis)' }}
-                  width={yAxisWidth}
-                />
+      ) : data.length ? (
+        <div className="allocationLayout">
+          <ChartFrame style={{ height: '17.25em' }} fallback={<div className="empty">Loading...</div>}>
+            {({ width, height }) => (
+              <PieChart width={width} height={height}>
+                <Pie
+                  data={data}
+                  dataKey="usd"
+                  nameKey="assetKey"
+                  innerRadius={Math.max(48, Math.min(width, height) * 0.24)}
+                  outerRadius={Math.max(76, Math.min(width, height) * 0.38)}
+                  paddingAngle={2}
+                  stroke="var(--card)"
+                  strokeWidth={2}
+                >
+                  {data.map((entry) => (
+                    <Cell key={entry.assetKey} fill={ASSETS[entry.assetKey].accent} />
+                  ))}
+                </Pie>
                 <Tooltip
                   contentStyle={tooltipContentStyle}
                   labelStyle={tooltipLabelStyle}
                   itemStyle={tooltipItemStyle}
-                  formatter={(value) => {
+                  formatter={(value, _name, item) => {
+                    const payload = item.payload as { percent?: number }
                     const n = Number(value)
-                    return [Number.isFinite(n) ? usd.format(n) : String(value), 'Value']
+                    const pct = payload.percent !== undefined ? ` (${payload.percent.toFixed(1)}%)` : ''
+                    return [Number.isFinite(n) ? `${usd.format(n)}${pct}` : String(value), 'Value']
                   }}
                 />
-                <Bar dataKey="usd" fill="var(--accent)" opacity={0.72} />
-              </BarChart>
-            )
-          }}
-        </ChartFrame>
+              </PieChart>
+            )}
+          </ChartFrame>
+
+          <div className="allocationLegend">
+            {data.map((item) => (
+              <div key={item.assetKey} className="allocationLegendRow">
+                <span
+                  className="allocationSwatch"
+                  style={{ background: ASSETS[item.assetKey].accent }}
+                  aria-hidden="true"
+                />
+                <span className="allocationName">{item.assetKey}</span>
+                <span className="allocationValue">{usd.format(item.usd)}</span>
+                <span className="allocationPct muted">{item.percent.toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
       ) : (
-        <div className="chartWrap" style={{ height: '16.25em' }}>
-          <div className="empty">Data unavailable</div>
+        <div className="chartWrap" style={{ height: '17.25em' }}>
+          <div className="empty">Connect a wallet with supported assets to see allocation.</div>
         </div>
       )}
-
-      <div className="footnote">Total ≈ {usd.format(totalUsd)}</div>
     </div>
   )
 }
