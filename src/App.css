@@ -847,6 +847,10 @@
   min-width: 0;
 }
 
+.chartFallbackCard {
+  margin-top: 1rem;
+}
+
 @media (max-width: 40rem) {
   .marketTile {
     --marketChartHeight: 16rem;

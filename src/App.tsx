@@ -41,7 +41,7 @@ const AssetComparisonChartCard = lazy(() =>
 
 function ChartFallback() {
   return (
-    <div className="card">
+    <div className="card chartFallbackCard">
       <div className="chartWrap">
         <div className="empty">Loading chart...</div>
       </div>
