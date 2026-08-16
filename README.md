@@ -70,27 +70,19 @@ If you want WalletConnect enabled on the deployed site:
 
 ### 4) Confirm the base path
 
-GitHub Pages serves your site under:
-
-- `https://<owner>.github.io/<repo>/`
-
-This project supports that via `VITE_BASE`. The workflow sets:
-
-- `VITE_BASE=/<repo>/`
-
-If you ever deploy somewhere else (root domain), use:
+This site is served from a custom domain (root path), so the workflow sets:
 
 - `VITE_BASE=/`
 
+If you ever deploy under `https://<owner>.github.io/<repo>/` instead (no custom domain), use:
+
+- `VITE_BASE=/<repo>/`
+
 ### Local Pages-like build (optional)
 
-If your repo is named `bitcoin-analytics`, you can test locally:
+Test locally with the same base as production:
 
 - PowerShell:
-  - `$env:VITE_BASE='/bitcoin-analytics/'; npm run build`
+  - `$env:VITE_BASE='/'; npm run build`
 - bash:
-  - `VITE_BASE=/bitcoin-analytics/ npm run build`
-
----
-
-If you want, we can also add a custom domain later (still free) or deploy to Cloudflare Pages (also free) for better SPA routing defaults.
+  - `VITE_BASE=/ npm run build`

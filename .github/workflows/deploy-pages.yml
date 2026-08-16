@@ -32,8 +32,8 @@ jobs:
 
       - name: Build
         env:
-          # Deploy under https://<owner>.github.io/<repo>/
-          VITE_BASE: /${{ github.event.repository.name }}/
+          # Deploy under a custom domain served from root
+          VITE_BASE: /
           # Optional: WalletConnect (not a secret, but keep it in a variable for convenience)
           VITE_WALLETCONNECT_PROJECT_ID: ${{ vars.VITE_WALLETCONNECT_PROJECT_ID }}
         run: npm run build
