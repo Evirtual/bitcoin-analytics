@@ -450,7 +450,9 @@
 }
 
 .supportItemBody {
-  padding: 0 0.875rem 0.875rem;
+  /* Top padding matches the row gap, so the notice sits off the header by the
+     same amount that separates it from the QR below. */
+  padding: 0.75rem 0.875rem 0.875rem;
   display: grid;
   gap: 0.75rem;
 }
