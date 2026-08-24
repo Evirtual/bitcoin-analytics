@@ -9,7 +9,7 @@ const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as
 const dappUrl =
   typeof globalThis !== 'undefined' && 'location' in globalThis
     ? (globalThis.location as Location).origin
-    : 'https://evirtual.github.io'
+    : 'https://bitcoin.edgarasneverdauskas.com'
 
 export const wagmiConfig = createConfig({
   chains: [mainnet, base, bsc],
