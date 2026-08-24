@@ -11,7 +11,7 @@
  * deliberate and load-bearing: it means the shell can be cached aggressively
  * without any risk of serving a stale BTC price.
  */
-const CACHE = 'bitcoin-analytics-v1'
+const CACHE = 'bitcoin-analytics-v2'
 
 /** The scope root, which is also the SPA entry point. Respects VITE_BASE. */
 const ROOT = new URL('./', self.location).pathname
