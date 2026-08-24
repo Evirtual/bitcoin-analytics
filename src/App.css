@@ -420,40 +420,81 @@
   background: color-mix(in srgb, var(--accentSoft) 55%, transparent);
 }
 
+.supportItemHeading {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+  text-align: left;
+}
+
 .supportItemTitle {
   font-weight: 800;
   letter-spacing: -0.01em;
 }
 
-.supportItemChevron {
-  flex: 0 0 auto;
-  width: 1.75rem;
-  height: 1.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999rem;
-  border: 0.0625rem solid var(--stroke);
-  background: var(--card2);
-  color: var(--textStrong);
-  line-height: 1;
-}
-
-.supportItemChevronGlyph {
-  position: relative;
+/* Ethereum, Base and BNB Chain share one address and the same ETH glyph, so the
+   chain is the only thing telling the three rows apart. */
+.supportItemSubtitle {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .supportItemNotice {
-  padding: 0.675rem 0.875rem;
-  color: var(--muted);
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.625rem;
+  border: 0.0625rem solid color-mix(in srgb, var(--warn) 45%, var(--stroke));
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  color: var(--textStrong);
   font-size: 0.8125rem;
-  border-top: 0.0625rem solid var(--divider);
 }
 
 .supportItemBody {
   padding: 0 0.875rem 0.875rem;
   display: grid;
   gap: 0.75rem;
+}
+
+.supportActions {
+  display: grid;
+  gap: 0.5rem;
+}
+
+@media (min-width: 26rem) {
+  .supportActions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* One of the two actions is an anchor (the explorer opens a new tab) and the
+   other a button, so the chrome that index.css hangs off the `button` element
+   has to be restated here for both to match. */
+.supportActionBtn {
+  width: 100%;
+  /* The anchor would otherwise inherit content-box and overflow its grid column
+     by the horizontal padding, while the button sits at border-box. */
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  line-height: 1.5;
+  border: 0.0625rem solid var(--stroke);
+  background-color: var(--btnBg);
+  color: var(--textStrong);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.supportActionBtn:hover {
+  border-color: var(--btnHoverBorder);
+  background-color: var(--btnBgHover);
+  color: var(--textStrong);
 }
 
 .supportFooter {
@@ -470,10 +511,6 @@
 
 .supportFooterDot {
   opacity: 0.7;
-}
-
-.supportExplorerBtn {
-  width: 100%;
 }
 
 .supportQrWrap {
@@ -506,9 +543,14 @@
 }
 
 .supportAddress {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.8125rem;
+  line-height: 1.5;
   color: var(--textStrong);
+  /* The whole address, wrapped — never an ellipsis. Checking an address means
+     reading its last characters. */
   word-break: break-all;
+  user-select: all;
   padding: 0.625rem 0.75rem;
   border-radius: 0.75rem;
   border: 0.0625rem solid var(--stroke);
