@@ -17,7 +17,10 @@ import { dirname, join } from 'node:path'
 
 const PUBLIC_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'public')
 
-/** Behind the mark on every icon. Matches <meta name="theme-color">. */
+/**
+ * Fallback ground, used only if favicon.svg has no full-bleed shape of its own.
+ * Matches <meta name="theme-color">.
+ */
 const BACKGROUND = [0x0b, 0x10, 0x20]
 
 /**
@@ -184,6 +187,7 @@ function readArtwork() {
   const [, , vbWidth, vbHeight] = numbers(viewBox[1])
 
   const shapes = []
+  let ground = BACKGROUND
   for (const [tag] of svg.matchAll(/<(?:circle|path)\b[^>]*>/g)) {
     const fill = tag.match(/fill="([^"]+)"/)
     if (!fill || fill[1] === 'none') continue
@@ -193,7 +197,16 @@ function readArtwork() {
       const cx = Number(tag.match(/cx="([^"]+)"/)?.[1] ?? 0)
       const cy = Number(tag.match(/cy="([^"]+)"/)?.[1] ?? 0)
       const r = Number(tag.match(/r="([^"]+)"/)?.[1] ?? 0)
-      shapes.push({ color, polygons: circleToPolygon(cx, cy, r) })
+      // A circle filling the viewBox is the mark's ground, not a shape sitting
+      // on one. Painting it as a disc would put an orange circle on a dark
+      // square — two backgrounds, which is what a launcher icon must not have.
+      // Promote it to the canvas colour so the icon is one colour edge to edge.
+      const fillsViewBox =
+        Math.abs(cx - vbWidth / 2) < 0.01 &&
+        Math.abs(cy - vbHeight / 2) < 0.01 &&
+        r >= vbWidth / 2 - 0.01
+      if (fillsViewBox) ground = color
+      else shapes.push({ color, polygons: circleToPolygon(cx, cy, r) })
     } else {
       const d = tag.match(/\sd="([^"]+)"/)
       if (d) shapes.push({ color, polygons: pathToPolygons(d[1]) })
@@ -201,7 +214,7 @@ function readArtwork() {
   }
 
   if (shapes.length === 0) throw new Error('generate-icons: no filled shapes in favicon.svg')
-  return { shapes, vbWidth, vbHeight }
+  return { shapes, ground, vbWidth, vbHeight }
 }
 
 // ------------------------------------------------------------------ rendering
@@ -282,7 +295,7 @@ function rasterize(polygons, size, scale, offsetX, offsetY) {
  * @param artWidth how much of that edge the mark should span, 0..1
  */
 function render(size, artWidth) {
-  const { shapes, vbWidth, vbHeight } = readArtwork()
+  const { shapes, ground, vbWidth, vbHeight } = readArtwork()
 
   const scale = (size * artWidth) / vbWidth
   const offsetX = (size - vbWidth * scale) / 2
@@ -290,9 +303,9 @@ function render(size, artWidth) {
 
   const pixels = Buffer.alloc(size * size * 4)
   for (let i = 0; i < size * size; i++) {
-    pixels[i * 4] = BACKGROUND[0]
-    pixels[i * 4 + 1] = BACKGROUND[1]
-    pixels[i * 4 + 2] = BACKGROUND[2]
+    pixels[i * 4] = ground[0]
+    pixels[i * 4 + 1] = ground[1]
+    pixels[i * 4 + 2] = ground[2]
     pixels[i * 4 + 3] = 255
   }
 
@@ -356,16 +369,16 @@ function png(size, pixels) {
   ])
 }
 
-// artWidth per target:
-//  - 0.78 full-bleed, for manifest `purpose: any` and the browser's own use.
-//  - 0.62 keeps the mark inside the maskable safe zone (the middle 80%) even
-//    once a launcher crops it to a circle.
-//  - 0.72 leaves room for the corner radius iOS applies to home-screen icons.
+// The ground is full-bleed, so artWidth now scales only the glyph drawn on it.
+// 1 keeps the B at the size the source art gives it inside the circle, which
+// spans about half the icon — already well within the maskable safe zone (the
+// middle 80%) and inside the corner radius iOS applies. That also means the
+// maskable icon would be byte-identical to the plain one, so the manifest
+// declares a single 512 as "any maskable" rather than shipping it twice.
 const TARGETS = [
-  ['icon-192.png', 192, 0.78],
-  ['icon-512.png', 512, 0.78],
-  ['icon-maskable-512.png', 512, 0.62],
-  ['apple-touch-icon.png', 180, 0.72],
+  ['icon-192.png', 192, 1],
+  ['icon-512.png', 512, 1],
+  ['apple-touch-icon.png', 180, 1],
 ]
 
 for (const [name, size, artWidth] of TARGETS) {
