@@ -7,6 +7,7 @@ import { WagmiProvider } from 'wagmi'
 import { wagmiConfig } from './wagmi'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { registerServiceWorker } from './registerServiceWorker'
+import { restoreLastConnection } from './lib/restoreConnection'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,17 +22,21 @@ const queryClient = new QueryClient({
 registerServiceWorker()
 
 /*
- * `reconnectOnMount` is left at its default of true, deliberately.
+ * The session still has to survive a relaunch: connecting from an installed PWA
+ * sends the user out to their wallet app, and iOS routinely relaunches the PWA
+ * when they come back. What changed is who does the restoring.
  *
- * Connecting from an installed PWA sends the user out to their wallet app, and
- * iOS routinely relaunches the PWA when they come back, so restoring the stored
- * session is the only thing between that round trip and a "Connect" button
- * again. Turning it off does not merely skip the reconnect: wagmi then clears
- * the connections it hydrated from storage, discarding the session on every
- * launch.
+ * wagmi's own `reconnectOnMount` walks every configured connector, which means
+ * a first-time visitor loads the WalletConnect and MetaMask SDKs before the
+ * dashboard renders, to reconnect a wallet they have never used. So it is off,
+ * and `restoreLastConnection` reconnects the one connector wagmi recorded as
+ * most recent -- started before the first render, so the header shows
+ * "Connecting..." rather than briefly offering to connect over a live session.
  */
+void restoreLastConnection()
+
 createRoot(document.getElementById('root')!).render(
-  <WagmiProvider config={wagmiConfig}>
+  <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
         <App />
