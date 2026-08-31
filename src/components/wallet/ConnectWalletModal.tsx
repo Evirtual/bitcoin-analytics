@@ -1,7 +1,9 @@
 import { Modal } from '../Modal'
 import { ConnectorList } from './ConnectorList'
+import { useWalletRows } from '../../hooks/useWalletRows'
+import type { ConnectorLike } from '../../lib/wallet'
 
-export function ConnectWalletModal<T extends { uid: string; name: string }>({
+export function ConnectWalletModal<T extends ConnectorLike>({
   open,
   onClose,
   connectors,
@@ -14,9 +16,24 @@ export function ConnectWalletModal<T extends { uid: string; name: string }>({
   disabled: boolean
   onSelectConnector: (connector: T) => void
 }) {
+  const { rows, installs, mobile, nothingDetected, hasWalletConnect } = useWalletRows(connectors)
+
   return (
     <Modal open={open} title="Connect Wallet" onClose={onClose}>
-      <ConnectorList connectors={connectors} disabled={disabled} onSelect={onSelectConnector} />
+      {mobile && nothingDetected ? (
+        <p className="muted small connectHint">
+          No wallet was found in this browser.{' '}
+          {hasWalletConnect
+            ? 'Pair one with WalletConnect, or open this site from inside your wallet\u2019s own browser.'
+            : 'Open this site from inside your wallet\u2019s own browser.'}
+        </p>
+      ) : null}
+      <ConnectorList
+        rows={rows}
+        installs={installs}
+        disabled={disabled}
+        onSelect={onSelectConnector}
+      />
     </Modal>
   )
 }

@@ -7,6 +7,8 @@ import { usd } from '../../lib/format'
 import { Modal } from '../Modal'
 import { AssetIcon } from '../AssetIcon'
 import { ConnectorList } from './ConnectorList'
+import { useWalletRows } from '../../hooks/useWalletRows'
+import type { ConnectorLike } from '../../lib/wallet'
 
 type GasRow = { chainName: string; formatted: string; symbol: string; error?: string }
 
@@ -67,7 +69,7 @@ function AssetBalanceDetails({
   )
 }
 
-export function AccountModal<T extends { uid: string; name: string }>({
+export function AccountModal<T extends ConnectorLike>({
   open,
   onClose,
   isConnected,
@@ -96,6 +98,7 @@ export function AccountModal<T extends { uid: string; name: string }>({
   chainIds: ChainId[]
   portfolioTotalUsd: number
 }) {
+  const walletRows = useWalletRows(connectors)
   const [expandedAssetKey, setExpandedAssetKey] = useState<AssetKey | null>(null)
 
   // Reset local UI state when closing, without triggering the "setState in effect" lint rule.
@@ -147,7 +150,12 @@ export function AccountModal<T extends { uid: string; name: string }>({
       {!isConnected ? (
         <div className="stack">
           <div className="muted small">Not connected</div>
-          <ConnectorList connectors={connectors} disabled={disabled} onSelect={onSelectConnector} />
+          <ConnectorList
+            rows={walletRows.rows}
+            installs={walletRows.installs}
+            disabled={disabled}
+            onSelect={onSelectConnector}
+          />
         </div>
       ) : (
         <div className="stack">

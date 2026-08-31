@@ -1566,3 +1566,31 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Wallet connect rows -------------------------------------------------- */
+
+.connectIcon img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: contain;
+  display: block;
+}
+
+/* Install entries are links, not buttons, so undo the anchor defaults. */
+a.connectRow {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.connectDivider {
+  padding: 0.25rem 0.125rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.connectHint {
+  margin: 0 0 0.75rem;
+  line-height: 1.45;
+}

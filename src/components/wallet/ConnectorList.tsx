@@ -1,55 +1,62 @@
-import { connectorInitials } from '../../lib/wallet'
+import { connectorInitials, type ConnectRow, type InstallRow } from '../../lib/wallet'
 
-function normalizeConnectorName(name: string) {
-  return name
-    .trim()
-    .replace(/\s+wallet$/i, '')
-    .replace(/\s+/g, ' ')
-    .toLowerCase()
+function WalletMark({ name, icon }: { name: string; icon?: string | undefined }) {
+  return (
+    <div className="connectIcon" aria-hidden="true">
+      {icon ? <img src={icon} alt="" /> : connectorInitials(name)}
+    </div>
+  )
 }
 
-function shouldHideConnector(name: string) {
-  // Hide injected MetaMask entry to avoid MetaMask-specific pending-permissions issues.
-  // Users should pick the dedicated "MetaMask" connector instead.
-  return normalizeConnectorName(name) === 'metamask'
-}
-
-export function ConnectorList<T extends { uid: string; name: string }>({
-  connectors,
+export function ConnectorList<T extends { uid: string }>({
+  rows,
+  installs,
   disabled,
   onSelect,
 }: {
-  connectors: readonly T[]
+  rows: readonly ConnectRow<T>[]
+  installs: readonly InstallRow[]
   disabled: boolean
   onSelect: (connector: T) => void
 }) {
-  const seen = new Set<string>()
-  const unique = connectors.filter((c) => {
-    if (shouldHideConnector(c.name)) return false
-    const key = normalizeConnectorName(c.name)
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
-
   return (
     <div className="stack">
-      {unique.map((c) => (
+      {rows.map((row) => (
         <button
-          key={c.uid}
+          key={row.connector.uid}
           className="connectRow"
-          onClick={() => onSelect(c)}
+          onClick={() => onSelect(row.connector)}
           disabled={disabled}
+          type="button"
         >
           <div className="connectLeft">
-            <div className="connectIcon" aria-hidden="true">
-              {connectorInitials(c.name)}
-            </div>
-            <div className="connectName">{c.name}</div>
+            <WalletMark name={row.name} icon={row.icon} />
+            <div className="connectName">{row.name}</div>
           </div>
           <div className="muted small">Select</div>
         </button>
       ))}
+
+      {installs.length > 0 ? (
+        <>
+          <div className="connectDivider muted small">Not installed</div>
+          {installs.map((install) => (
+            <a
+              key={install.key}
+              className="connectRow"
+              href={install.url}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              <div className="connectLeft">
+                <WalletMark name={install.name} />
+                <div className="connectName">{install.name}</div>
+              </div>
+              <div className="muted small">Install ↗</div>
+            </a>
+          ))}
+        </>
+      ) : null}
     </div>
   )
 }

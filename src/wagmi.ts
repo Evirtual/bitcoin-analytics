@@ -11,12 +11,20 @@ const dappUrl =
     ? (globalThis.location as Location).origin
     : 'https://bitcoin.edgarasneverdauskas.com'
 
+const APP_NAME = 'Bitcoin Analytics'
+const APP_DESCRIPTION = 'Market stats + multichain wallet balances'
+
+// Extension wallets announce themselves over EIP-6963 and wagmi turns each one
+// into its own connector (`multiInjectedProviderDiscovery`, on by default), so
+// the list below is only the connectors that cannot be discovered: MetaMask's
+// SDK (which deep links to the app on phones), a bare injected fallback for
+// wallets that never announce, and WalletConnect for pairing.
 export const wagmiConfig = createConfig({
   chains: [mainnet, base, bsc],
   connectors: [
     metaMask({
       dappMetadata: {
-        name: 'Bitcoin Analytics',
+        name: APP_NAME,
         url: dappUrl,
       },
     }),
@@ -26,6 +34,13 @@ export const wagmiConfig = createConfig({
           walletConnect({
             projectId: walletConnectProjectId,
             showQrModal: true,
+            // Shown by the paired wallet while it asks the user to approve.
+            metadata: {
+              name: APP_NAME,
+              description: APP_DESCRIPTION,
+              url: dappUrl,
+              icons: [dappUrl + '/icon-192.png'],
+            },
           }),
         ]
       : []),

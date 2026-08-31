@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.2",
+    "@walletconnect/ethereum-provider": "^2.24.0",
     "cryptocurrency-icons": "^0.18.1",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.7",
