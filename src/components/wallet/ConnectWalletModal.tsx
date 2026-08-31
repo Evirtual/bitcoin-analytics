@@ -1,8 +1,10 @@
 import { Modal } from '../Modal'
 import { ConnectorList } from './ConnectorList'
 import { WalletConnectPairing } from './WalletConnectPairing'
+import { useMemo } from 'react'
 import { useWalletRows } from '../../hooks/useWalletRows'
-import { connectorMark, type ConnectorLike } from '../../lib/wallet'
+import { useWalletDirectory } from '../../hooks/useWalletDirectory'
+import { connectorMark, normalizeConnectorName, type ConnectorLike } from '../../lib/wallet'
 
 /**
  * The whole connect flow, as one window that changes step.
@@ -35,6 +37,19 @@ export function ConnectWalletModal<T extends ConnectorLike>({
   onBack: () => void
 }) {
   const { rows, installs, mobile, nothingDetected, hasWalletConnect } = useWalletRows(connectors)
+
+  // A wallet that is not installed announces nothing, so it has no icon of
+  // its own to show. WalletConnect’s registry knows what they look like, and
+  // the pairing step fetches it anyway -- asking for it here means the list
+  // is drawn properly and that step opens already loaded.
+  const directory = useWalletDirectory(open)
+  const directoryIcons = useMemo(() => {
+    const byName: Record<string, string> = {}
+    for (const wallet of directory.data ?? []) {
+      byName[normalizeConnectorName(wallet.name)] = wallet.imageUrl
+    }
+    return byName
+  }, [directory.data])
 
   // WalletConnect hands over a pairing request rather than opening a window of
   // its own, so it gets its own step -- shown from the moment it is picked,
@@ -92,7 +107,12 @@ export function ConnectWalletModal<T extends ConnectorLike>({
         </p>
       ) : null}
 
-      <ConnectorList rows={rows} installs={installs} onSelect={onSelectConnector} />
+      <ConnectorList
+        rows={rows}
+        installs={installs}
+        directoryIcons={directoryIcons}
+        onSelect={onSelectConnector}
+      />
 
       {errorText ? (
         <div className="connectError" role="alert">

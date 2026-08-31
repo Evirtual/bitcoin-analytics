@@ -1615,6 +1615,14 @@ a.connectRow {
   letter-spacing: 0.02em;
 }
 
+/* A wallet’s own mark already has a shape and a backdrop of its own; a frame
+   around all of them only fights whatever each one drew. The lettered fallback
+   still needs its tile. */
+.connectIconArt {
+  border-color: transparent;
+  background: transparent;
+}
+
 .connectIcon img {
   width: 100%;
   height: 100%;

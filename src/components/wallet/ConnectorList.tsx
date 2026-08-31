@@ -1,10 +1,26 @@
 import { ArrowUpRight, ChevronRight } from 'lucide-react'
-import { connectorInitials, connectorMark, type ConnectRow, type InstallRow } from '../../lib/wallet'
+import {
+  connectorInitials,
+  connectorMark,
+  normalizeConnectorName,
+  type ConnectRow,
+  type InstallRow,
+} from '../../lib/wallet'
 
-function WalletMark({ name, icon }: { name: string; icon?: string | undefined }) {
-  const src = connectorMark(name, icon)
+function WalletMark({
+  name,
+  icon,
+  directoryIcons,
+}: {
+  name: string
+  icon?: string | undefined
+  directoryIcons?: Record<string, string> | undefined
+}) {
+  const src = connectorMark(name, icon) ?? directoryIcons?.[normalizeConnectorName(name)]
   return (
-    <div className="connectIcon" aria-hidden="true">
+    // Each mark carries its own shape and backdrop, so a frame around them all
+    // only fights whatever the wallet drew.
+    <div className={src ? 'connectIcon connectIconArt' : 'connectIcon'} aria-hidden="true">
       {src ? <img src={src} alt="" /> : connectorInitials(name)}
     </div>
   )
@@ -13,10 +29,12 @@ function WalletMark({ name, icon }: { name: string; icon?: string | undefined })
 export function ConnectorList<T extends { uid: string }>({
   rows,
   installs,
+  directoryIcons,
   onSelect,
 }: {
   rows: readonly ConnectRow<T>[]
   installs: readonly InstallRow[]
+  directoryIcons?: Record<string, string> | undefined
   onSelect: (connector: T) => void
 }) {
   return (
@@ -29,7 +47,7 @@ export function ConnectorList<T extends { uid: string }>({
           type="button"
         >
           <div className="connectLeft">
-            <WalletMark name={row.name} icon={row.icon} />
+            <WalletMark name={row.name} icon={row.icon} directoryIcons={directoryIcons} />
             <div className="connectName">{row.name}</div>
           </div>
           <span className="connectGo" aria-hidden="true">
@@ -50,7 +68,7 @@ export function ConnectorList<T extends { uid: string }>({
               rel="noreferrer noopener"
             >
               <div className="connectLeft">
-                <WalletMark name={install.name} />
+                <WalletMark name={install.name} directoryIcons={directoryIcons} />
                 <div className="connectName">{install.name}</div>
               </div>
               <span className="connectInstall">
