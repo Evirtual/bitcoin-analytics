@@ -1611,6 +1611,8 @@ a.connectRow {
   display: block;
   text-align: center;
   text-decoration: none;
+  /* .btn sets no colour, so an anchor would take the browser link blue. */
+  color: inherit;
 }
 
 .wcHint {
