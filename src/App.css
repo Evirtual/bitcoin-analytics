@@ -1151,6 +1151,53 @@
   font-size: 0.875rem;
 }
 
+.connectRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+}
+
+.connectLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.connectIcon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.625rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+  color: var(--textStrong);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.connectRow:hover {
+  border-color: color-mix(in srgb, var(--stroke) 65%, var(--accent) 35%);
+  background: var(--card);
+}
+
+.connectRow:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.connectName {
+  font-weight: 800;
+}
+
 .accountTop {
   display: flex;
   align-items: flex-start;
@@ -1518,4 +1565,32 @@
   .marketGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Wallet connect rows -------------------------------------------------- */
+
+.connectIcon img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: contain;
+  display: block;
+}
+
+/* Install entries are links, not buttons, so undo the anchor defaults. */
+a.connectRow {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.connectDivider {
+  padding: 0.25rem 0.125rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.connectHint {
+  margin: 0 0 0.75rem;
+  line-height: 1.45;
 }

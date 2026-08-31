@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
-import { useAccount, useDisconnect } from 'wagmi'
+import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
 import { useAssetBalances, useUserAssetTotals } from './hooks/useAssetBalances'
 import { useCandles, useCandlesMany, useChange24h, useSpotUsd, useSpotUsdMany } from './hooks/useMarket'
@@ -11,11 +11,13 @@ import { Header } from './components/dashboard/Header'
 import { MarketMoodCard } from './components/dashboard/MarketMoodCard'
 import { MarketDashboardMeta } from './components/dashboard/MarketDashboardMeta'
 import { AccountModal } from './components/wallet/AccountModal'
+import { ConnectWalletModal } from './components/wallet/ConnectWalletModal'
 import { SwapModal } from './components/swap/SwapModal'
+import { Toast } from './components/Toast'
 import { SupportDeveloperModal } from './components/SupportDeveloperModal'
 import { useTheme } from './hooks/useTheme'
-import { appKit } from './wagmi'
 import { compact, usd } from './lib/format'
+import { formatConnectErrorMessage } from './lib/wallet'
 import './App.css'
 
 const PriceChartCard = lazy(() => import('./components/charts/PriceChartCard').then((m) => ({ default: m.PriceChartCard })))
@@ -98,13 +100,36 @@ function writeMarketCardOrder(order: MarketCardId[]) {
   }
 }
 
+function getErrorMessage(err: unknown): string | undefined {
+  if (!err) return undefined
+  if (typeof err === 'string') return err
+  if (typeof err === 'object') {
+    const anyErr = err as { message?: unknown; shortMessage?: unknown; details?: unknown }
+    if (typeof anyErr.shortMessage === 'string' && anyErr.shortMessage.trim()) return anyErr.shortMessage
+    if (typeof anyErr.message === 'string' && anyErr.message.trim()) return anyErr.message
+    if (typeof anyErr.details === 'string' && anyErr.details.trim()) return anyErr.details
+    try {
+      return JSON.stringify(err)
+    } catch {
+      return undefined
+    }
+  }
+  return String(err)
+}
 
 function App() {
   const { theme, toggleTheme } = useTheme()
   const { address, isConnected, chain, status: accountStatus } = useAccount()
+  const {
+    connectors,
+    connect,
+    connectAsync,
+    isPending: isConnecting,
+    error: connectError,
+  } = useConnect()
   const { disconnect } = useDisconnect()
-  // AppKit owns the wallet picker now: which wallets show, whether they are
-  // installed, deep linking into the app, and the per-wallet connect states.
+
+  const [connectUiPending, setConnectUiPending] = useState(false)
   const [dashboardView, setDashboardView] = useState<'market' | 'portfolio'>('market')
   const [marketCardOrder, setMarketCardOrder] = useState<MarketCardId[]>(readMarketCardOrder)
   const [draggedMarketCard, setDraggedMarketCard] = useState<MarketCardId | null>(null)
@@ -112,7 +137,7 @@ function App() {
 
   // On a cold start wagmi is still restoring the stored session, so showing an
   // enabled "Connect" would invite a second connection over the live one.
-  const connectDisabled = accountStatus === 'connecting' || accountStatus === 'reconnecting'
+  const connectDisabled = isConnecting || connectUiPending || accountStatus === 'reconnecting'
   const activeDashboardView = isConnected ? dashboardView : 'market'
 
   const moveMarketCard = useCallback((from: MarketCardId, to: MarketCardId) => {
@@ -129,11 +154,38 @@ function App() {
     })
   }, [])
 
-  // Connection failures are reported inside AppKit's own modal, next to the
-  // wallet that failed, so there is nothing left for a page-level toast to say.
-  const showConnect = useCallback(() => {
-    void appKit.open()
-  }, [])
+  const connectErrorText = useMemo(() => {
+    const msg = getErrorMessage(connectError)
+    return msg ? formatConnectErrorMessage(msg) : undefined
+  }, [connectError])
+
+  const [dismissedConnectError, setDismissedConnectError] = useState<string | undefined>(undefined)
+  const connectToastOpen = Boolean(connectErrorText && connectErrorText !== dismissedConnectError)
+
+  useEffect(() => {
+    if (!connectToastOpen || !connectErrorText) return
+    const t = window.setTimeout(() => setDismissedConnectError(connectErrorText), 8000)
+    return () => window.clearTimeout(t)
+  }, [connectErrorText, connectToastOpen])
+
+  const runConnect = useCallback(
+    async (connector: (typeof connectors)[number]) => {
+      if (connectDisabled) return
+
+      setConnectUiPending(true)
+      setDismissedConnectError(undefined)
+      try {
+        if (connectAsync) {
+          await connectAsync({ connector })
+        } else {
+          connect({ connector })
+        }
+      } finally {
+        setConnectUiPending(false)
+      }
+    },
+    [connect, connectAsync, connectDisabled],
+  )
 
   const chainIds = useMemo<ChainId[]>(() => [1, 8453, 56], [])
 
@@ -147,14 +199,6 @@ function App() {
 
   const accent = ASSETS[assetKey].accent
   const accentSoft = ASSETS[assetKey].accentSoft
-
-  // AppKit renders its own modal outside this tree, so the only way it follows
-  // the dashboard's light/dark setting and the selected asset's accent is to
-  // push both across whenever they change.
-  useEffect(() => {
-    appKit.setThemeMode(theme)
-    appKit.setThemeVariables({ '--w3m-accent': accent })
-  }, [accent, theme])
 
   const spotUsd = useSpotUsd(assetKey)
   const change24h = useChange24h(assetKey)
@@ -227,6 +271,7 @@ function App() {
       .join(' / ')
   }, [gas.data, gas.isLoading])
 
+  const [connectOpen, setConnectOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [swapOpen, setSwapOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
@@ -424,13 +469,20 @@ function App() {
         isConnected={isConnected}
         address={address}
         chain={chain}
-        onOpenConnect={showConnect}
+        onOpenConnect={() => setConnectOpen(true)}
         onOpenAccount={() => setAccountOpen(true)}
         onOpenSwap={() => setSwapOpen(true)}
         onOpenSupport={() => setSupportOpen(true)}
         theme={theme}
         onToggleTheme={toggleTheme}
         connectDisabled={connectDisabled}
+      />
+
+      <Toast
+        open={connectToastOpen}
+        variant="error"
+        message={connectErrorText ?? ''}
+        onClose={() => setDismissedConnectError(connectErrorText)}
       />
 
       <div className="toolbar">
@@ -721,6 +773,17 @@ function App() {
 
       <SupportDeveloperModal open={supportOpen} onClose={() => setSupportOpen(false)} />
 
+      <ConnectWalletModal
+        open={connectOpen}
+        onClose={() => setConnectOpen(false)}
+        connectors={connectors}
+        disabled={connectDisabled}
+        onSelectConnector={(c) => {
+          setConnectOpen(false)
+          void runConnect(c)
+        }}
+      />
+
       <SwapModal
         open={swapOpen}
         onClose={() => setSwapOpen(false)}
@@ -734,9 +797,11 @@ function App() {
         onClose={() => setAccountOpen(false)}
         isConnected={isConnected}
         address={address}
-        onOpenConnect={() => {
+        connectors={connectors}
+        disabled={connectDisabled}
+        onSelectConnector={(c) => {
           setAccountOpen(false)
-          showConnect()
+          void runConnect(c)
         }}
         gas={{ isLoading: gas.isLoading, isRefetching: gas.isRefetching, data: gas.data, refetch: gas.refetch }}
         onDisconnect={() => disconnect()}

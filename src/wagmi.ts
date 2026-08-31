@@ -1,68 +1,53 @@
-import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
-import { createAppKit } from '@reown/appkit/react'
-import { base, bsc, mainnet } from '@reown/appkit/networks'
-import { http } from 'wagmi'
+import { http, createConfig } from 'wagmi'
+import { base, bsc, mainnet } from 'wagmi/chains'
+import { injected, metaMask, walletConnect } from 'wagmi/connectors'
 
-// AppKit cannot be built without one, and it is the only route to a wallet on a
-// phone, so this is a hard requirement rather than an optional extra. It is a
-// public identifier, not a secret: the deploy passes it as a plain variable.
-const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined
-if (!projectId) {
-  throw new Error(
-    'VITE_WALLETCONNECT_PROJECT_ID is not set. Create a project at https://dashboard.reown.com ' +
-      'and put its id in .env.local (see .env.example).',
-  )
-}
+const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as
+  | string
+  | undefined
 
 const dappUrl =
   typeof globalThis !== 'undefined' && 'location' in globalThis
     ? (globalThis.location as Location).origin
     : 'https://bitcoin.edgarasneverdauskas.com'
 
-const networks = [mainnet, base, bsc] as const
+const APP_NAME = 'Bitcoin Analytics'
+const APP_DESCRIPTION = 'Market stats + multichain wallet balances'
 
-const wagmiAdapter = new WagmiAdapter({
-  projectId,
-  networks: [...networks],
+// Extension wallets announce themselves over EIP-6963 and wagmi turns each one
+// into its own connector (`multiInjectedProviderDiscovery`, on by default), so
+// the list below is only the connectors that cannot be discovered: MetaMask's
+// SDK (which deep links to the app on phones), a bare injected fallback for
+// wallets that never announce, and WalletConnect for pairing.
+export const wagmiConfig = createConfig({
+  chains: [mainnet, base, bsc],
+  connectors: [
+    metaMask({
+      dappMetadata: {
+        name: APP_NAME,
+        url: dappUrl,
+      },
+    }),
+    injected(),
+    ...(walletConnectProjectId
+      ? [
+          walletConnect({
+            projectId: walletConnectProjectId,
+            showQrModal: true,
+            // Shown by the paired wallet while it asks the user to approve.
+            metadata: {
+              name: APP_NAME,
+              description: APP_DESCRIPTION,
+              url: dappUrl,
+              icons: [dappUrl + '/icon-192.png'],
+            },
+          }),
+        ]
+      : []),
+  ],
   transports: {
     [mainnet.id]: http(),
     [base.id]: http(),
     [bsc.id]: http(),
-  },
-})
-
-// The adapter builds the wagmi config, so every wagmi hook in the app keeps
-// working unchanged -- AppKit only takes over choosing and connecting a wallet.
-export const wagmiConfig = wagmiAdapter.wagmiConfig
-
-// Exported as a value rather than reached through useAppKit()/useAppKitTheme():
-// those hooks build new function identities on every render and subscribe to
-// theme state, so driving them from an effect re-enters itself forever.
-export const appKit = createAppKit({
-  adapters: [wagmiAdapter],
-  networks: [...networks],
-  projectId,
-  metadata: {
-    name: 'Bitcoin Analytics',
-    description: 'Market stats + multichain wallet balances',
-    url: dappUrl,
-    icons: [dappUrl + '/icon-192.png'],
-  },
-  // Off by default in AppKit, and it is the whole point here: it is what
-  // notices an extension wallet and lists it as already installed.
-  enableEIP6963: true,
-  // Neither is offered, and both cost more than their absence. The Coinbase SDK
-  // reports to cca-lite.coinbase.com on load -- blocked by most content
-  // blockers, so it only ever shows up as console noise.
-  enableCoinbase: false,
-  enableBaseAccount: false,
-  // This is a read-only dashboard: it needs a wallet connected, and none of the
-  // custodial or commerce surfaces AppKit can also render.
-  features: {
-    analytics: false,
-    email: false,
-    socials: false,
-    onramp: false,
-    swaps: false,
   },
 })

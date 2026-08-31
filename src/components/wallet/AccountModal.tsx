@@ -6,6 +6,9 @@ import { useAssetBalances } from '../../hooks/useAssetBalances'
 import { usd } from '../../lib/format'
 import { Modal } from '../Modal'
 import { AssetIcon } from '../AssetIcon'
+import { ConnectorList } from './ConnectorList'
+import { useWalletRows } from '../../hooks/useWalletRows'
+import type { ConnectorLike } from '../../lib/wallet'
 
 type GasRow = { chainName: string; formatted: string; symbol: string; error?: string }
 
@@ -66,12 +69,14 @@ function AssetBalanceDetails({
   )
 }
 
-export function AccountModal({
+export function AccountModal<T extends ConnectorLike>({
   open,
   onClose,
   isConnected,
   address,
-  onOpenConnect,
+  connectors,
+  disabled,
+  onSelectConnector,
   gas,
   onDisconnect,
   assetTotals,
@@ -83,7 +88,9 @@ export function AccountModal({
   onClose: () => void
   isConnected: boolean
   address: Address | undefined
-  onOpenConnect: () => void
+  connectors: readonly T[]
+  disabled: boolean
+  onSelectConnector: (connector: T) => void
   gas: { isLoading: boolean; isRefetching?: boolean; data: GasRow[] | undefined; refetch?: () => unknown }
   onDisconnect: () => void
   assetTotals: { isLoading: boolean; isRefetching?: boolean; data: AssetTotal[] | undefined; refetch?: () => unknown }
@@ -91,6 +98,7 @@ export function AccountModal({
   chainIds: ChainId[]
   portfolioTotalUsd: number
 }) {
+  const walletRows = useWalletRows(connectors)
   const [expandedAssetKey, setExpandedAssetKey] = useState<AssetKey | null>(null)
 
   // Reset local UI state when closing, without triggering the "setState in effect" lint rule.
@@ -142,9 +150,12 @@ export function AccountModal({
       {!isConnected ? (
         <div className="stack">
           <div className="muted small">Not connected</div>
-          <button className="btn btnPrimary" type="button" onClick={onOpenConnect}>
-            Connect Wallet
-          </button>
+          <ConnectorList
+            rows={walletRows.rows}
+            installs={walletRows.installs}
+            disabled={disabled}
+            onSelect={onSelectConnector}
+          />
         </div>
       ) : (
         <div className="stack">
