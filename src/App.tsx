@@ -119,7 +119,7 @@ function getErrorMessage(err: unknown): string | undefined {
 
 function App() {
   const { theme, toggleTheme } = useTheme()
-  const { address, isConnected, chain } = useAccount()
+  const { address, isConnected, chain, status: accountStatus } = useAccount()
   const {
     connectors,
     connect,
@@ -135,7 +135,9 @@ function App() {
   const [draggedMarketCard, setDraggedMarketCard] = useState<MarketCardId | null>(null)
   const [dragOverMarketCard, setDragOverMarketCard] = useState<MarketCardId | null>(null)
 
-  const connectDisabled = isConnecting || connectUiPending
+  // On a cold start wagmi is still restoring the stored session, so showing an
+  // enabled "Connect" would invite a second connection over the live one.
+  const connectDisabled = isConnecting || connectUiPending || accountStatus === 'reconnecting'
   const activeDashboardView = isConnected ? dashboardView : 'market'
 
   const moveMarketCard = useCallback((from: MarketCardId, to: MarketCardId) => {
