@@ -549,6 +549,7 @@
 }
 
 .supportAddress {
+  container-type: inline-size;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1917,6 +1918,13 @@ a.connectRow {
 .supportAddressText {
   flex: 1 1 auto;
   min-width: 0;
+  /* One line at every width this window is given, phones included. An
+     address is checked by reading it, and a line break in the middle of one
+     is the thing that makes that hard -- so the type is sized against the
+     row rather than fixed, and shrinks instead of wrapping. Capped so it
+     never grows past the size the rest of the block is set in. */
+  white-space: nowrap;
+  font-size: min(0.8125rem, 2.35cqi);
 }
 
 /* Sits against the address without inheriting its monospace or select-all. */
