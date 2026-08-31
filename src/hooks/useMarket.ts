@@ -31,7 +31,7 @@ function toNumber(value: string | number | undefined | null): number {
 type MarketCacheEntry = { v: number; ts: number }
 
 const SPOT_CACHE_TTL_MS = 60_000
-const COINBASE_BACKOFF_MS = 5 * 60_000
+const SOURCE_BACKOFF_MS = 5 * 60_000
 
 function cacheKeySpot(assetKey: AssetKey) {
   return `market.spot.usd.${assetKey}`
@@ -59,22 +59,25 @@ function writeSpotCache(assetKey: AssetKey, value: number) {
   }
 }
 
-function coinbaseDownKey(kind: 'spot' | 'candles') {
-  return `market.coinbase.${kind}.downUntil`
+type MarketSource = 'kraken' | 'coinbase'
+
+function sourceDownKey(source: MarketSource, kind: 'spot' | 'candles') {
+  return `market.${source}.${kind}.downUntil`
 }
 
 // Mirrored in memory so the backoff still holds when storage is unavailable,
 // as it is in a private window.
 const downUntilMemory: Record<string, number> = {}
 
-function readDownUntil(kind: 'spot' | 'candles'): number {
-  const remembered = downUntilMemory[kind] ?? 0
+function readDownUntil(source: MarketSource, kind: 'spot' | 'candles'): number {
+  const memoryKey = `${source}.${kind}`
+  const remembered = downUntilMemory[memoryKey] ?? 0
   try {
     // localStorage rather than session: an installed app is relaunched often,
     // and per-session state meant every launch re-ran the whole failing sweep
     // before falling back. Someone whose network blocks Coinbase outright paid
     // that on every cold start.
-    const raw = localStorage.getItem(coinbaseDownKey(kind))
+    const raw = localStorage.getItem(sourceDownKey(source, kind))
     const n = raw ? Number(raw) : 0
     return Math.max(remembered, Number.isFinite(n) ? n : 0)
   } catch {
@@ -82,21 +85,21 @@ function readDownUntil(kind: 'spot' | 'candles'): number {
   }
 }
 
-function setDownUntil(kind: 'spot' | 'candles', until: number) {
-  downUntilMemory[kind] = until
+function setDownUntil(source: MarketSource, kind: 'spot' | 'candles', until: number) {
+  downUntilMemory[`${source}.${kind}`] = until
   try {
-    localStorage.setItem(coinbaseDownKey(kind), String(until))
+    localStorage.setItem(sourceDownKey(source, kind), String(until))
   } catch {
     // ignore
   }
 }
 
-function markCoinbaseDown(kind: 'spot' | 'candles') {
-  setDownUntil(kind, Date.now() + COINBASE_BACKOFF_MS)
+function markSourceDown(source: MarketSource, kind: 'spot' | 'candles') {
+  setDownUntil(source, kind, Date.now() + SOURCE_BACKOFF_MS)
 }
 
-function shouldSkipCoinbase(kind: 'spot' | 'candles') {
-  return Date.now() < readDownUntil(kind)
+function shouldSkipSource(source: MarketSource, kind: 'spot' | 'candles') {
+  return Date.now() < readDownUntil(source, kind)
 }
 
 function isRateLimitStatus(status: number) {
@@ -109,7 +112,7 @@ async function fetchCoinbaseSpotUsd(assetKey: AssetKey, signal?: AbortSignal): P
 
   const res = await fetch(`https://api.coinbase.com/v2/prices/${asset.spotSymbol}-USD/spot`, { signal })
   if (!res.ok) {
-    if (isRateLimitStatus(res.status)) markCoinbaseDown('spot')
+    if (isRateLimitStatus(res.status)) markSourceDown('coinbase', 'spot')
     throw new Error('Coinbase spot failed')
   }
   const json = (await res.json()) as CoinbaseSpotResponse
@@ -137,7 +140,7 @@ async function fetchCoinbaseCandles(
 
   const res = await fetch(url.toString(), { signal })
   if (!res.ok) {
-    if (isRateLimitStatus(res.status)) markCoinbaseDown('candles')
+    if (isRateLimitStatus(res.status)) markSourceDown('coinbase', 'candles')
     throw new Error('Coinbase candles failed')
   }
   const json = (await res.json()) as CoinbaseCandlesResponse
@@ -154,11 +157,11 @@ async function fetchCoinbaseCandles(
     }))
 }
 
-async function fetchKrakenSpotUsd(assetKey: AssetKey): Promise<number> {
+async function fetchKrakenSpotUsd(assetKey: AssetKey, signal?: AbortSignal): Promise<number> {
   const asset = ASSETS[assetKey]
   // Kraken uses different pair codes for some assets.
   const pair = asset.krakenPair ?? (assetKey === 'BTC' ? 'XBTUSD' : `${assetKey}USD`)
-  const res = await fetch(`https://api.kraken.com/0/public/Ticker?pair=${pair}`)
+  const res = await fetch(`https://api.kraken.com/0/public/Ticker?pair=${pair}`, { signal })
   if (!res.ok) throw new Error('Kraken spot failed')
   const json = (await res.json()) as KrakenTickerResponse
   if (json.error?.length) throw new Error('Kraken spot error')
@@ -173,17 +176,17 @@ async function fetchSpotUsdWithFallback(assetKey: AssetKey, signal?: AbortSignal
   const cached = readSpotCache(assetKey)
   if (cached !== undefined) return cached
 
-  if (!shouldSkipCoinbase('spot')) {
+  if (!shouldSkipSource('kraken', 'spot')) {
     try {
-      const v = await fetchCoinbaseSpotUsd(assetKey, signal)
+      const v = await fetchKrakenSpotUsd(assetKey, signal)
       if (Number.isFinite(v)) writeSpotCache(assetKey, v)
       return v
     } catch {
-      markCoinbaseDown('spot')
+      markSourceDown('kraken', 'spot')
     }
   }
 
-  const v = await fetchKrakenSpotUsd(assetKey)
+  const v = await fetchCoinbaseSpotUsd(assetKey, signal)
   if (Number.isFinite(v)) writeSpotCache(assetKey, v)
   return v
 }
@@ -193,19 +196,20 @@ async function fetchCandlesWithFallback(
   days: number,
   signal?: AbortSignal,
 ): Promise<Array<{ t: string; ts: number; price: number; volume: number }>> {
-  if (!shouldSkipCoinbase('candles')) {
+  if (!shouldSkipSource('kraken', 'candles')) {
     try {
-      return await fetchCoinbaseCandles(assetKey, days, signal)
+      return await fetchKrakenCandles(assetKey, days, signal)
     } catch {
-      markCoinbaseDown('candles')
+      markSourceDown('kraken', 'candles')
     }
   }
-  return await fetchKrakenCandles(assetKey, days)
+  return await fetchCoinbaseCandles(assetKey, days, signal)
 }
 
 async function fetchKrakenCandles(
   assetKey: AssetKey,
   days: number,
+  signal?: AbortSignal,
 ): Promise<Array<{ t: string; ts: number; price: number; volume: number }>> {
   const asset = ASSETS[assetKey]
   const pair = asset.krakenPair ?? (assetKey === 'BTC' ? 'XBTUSD' : `${assetKey}USD`)
@@ -213,6 +217,7 @@ async function fetchKrakenCandles(
   const since = Math.floor((Date.now() - days * 24 * 60 * 60 * 1000) / 1000)
   const res = await fetch(
     `https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=${intervalMinutes}&since=${since}`,
+    { signal },
   )
   if (!res.ok) throw new Error('Kraken candles failed')
   const json = (await res.json()) as KrakenOHLCResponse
