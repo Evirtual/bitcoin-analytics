@@ -1,3 +1,5 @@
+import { X } from 'lucide-react'
+
 type ToastProps = {
   open: boolean
   variant?: 'error' | 'default'
@@ -13,7 +15,7 @@ export function Toast({ open, variant = 'default', message, onClose }: ToastProp
       <div className={variant === 'error' ? 'toast banner error' : 'toast banner'}>
         <div className="toastMessage">{message}</div>
         <button className="iconBtn toastClose" type="button" onClick={onClose} aria-label="Dismiss">
-          ✕
+          <X size={16} strokeWidth={1.75} aria-hidden="true" />
         </button>
       </div>
     </div>

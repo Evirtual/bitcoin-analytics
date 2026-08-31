@@ -1,3 +1,4 @@
+import { ArrowLeftRight, Heart, Moon, Sun } from 'lucide-react'
 import type { Chain } from 'viem'
 import type { AssetKey } from '../../assets/catalog'
 import { ASSETS } from '../../assets/catalog'
@@ -55,7 +56,7 @@ export function Header({
         {isConnected ? (
           <button className="pill pillBtn pillPrimary headerSwapBtn" type="button" onClick={onOpenSwap}>
             <span className="pillIcon pillIconSwap" aria-hidden="true">
-              ⇄
+              <ArrowLeftRight size={15} strokeWidth={2} />
             </span>
             Swap
           </button>
@@ -68,7 +69,7 @@ export function Header({
           aria-label="Support the developer"
         >
           <span className="pillIcon pillIconHeart" aria-hidden="true">
-            ♥
+            <Heart size={15} strokeWidth={2} />
           </span>
           Support
         </button>
@@ -83,11 +84,11 @@ export function Header({
         >
           {theme === 'dark' ? (
             <span className="pillIcon pillIconSun" aria-hidden="true">
-              ☀
+              <Sun size={15} strokeWidth={2} />
             </span>
           ) : (
             <span className="pillIcon pillIconMoon" aria-hidden="true">
-              ☾
+              <Moon size={15} strokeWidth={2} />
             </span>
           )}
           {theme === 'dark' ? 'Light' : 'Dark'}

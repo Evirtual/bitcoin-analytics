@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Info, X } from 'lucide-react'
 import { useOutsideClick } from '../../hooks/useOutsideClick'
 
 export function MarketDashboardMeta({ isRefreshing }: { isRefreshing: boolean }) {
@@ -66,7 +67,7 @@ export function MarketDashboardMeta({ isRefreshing }: { isRefreshing: boolean })
           onBlur={() => (isMobile ? undefined : setInfoFocus(false))}
           onClick={() => setInfoPinned((v) => !v)}
         >
-          i
+          <Info size={15} strokeWidth={2} aria-hidden="true" />
         </button>
         {infoOpen ? (
           <div
@@ -76,7 +77,7 @@ export function MarketDashboardMeta({ isRefreshing }: { isRefreshing: boolean })
           >
             {isMobile ? (
               <button type="button" className="infoTooltipClose" onClick={closeInfo} aria-label="Close">
-                ✕
+                <X size={16} strokeWidth={1.75} aria-hidden="true" />
               </button>
             ) : null}
             <div className="infoTooltipTitle">How this data is fetched</div>

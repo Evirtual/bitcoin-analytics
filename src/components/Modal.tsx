@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react'
+import { ArrowLeft, X } from 'lucide-react'
 
 type ModalProps = {
   open: boolean
@@ -107,14 +108,14 @@ export function Modal({ open, title, onClose, onBack, size, children }: ModalPro
         <div className="modalHeader">
           {onBack ? (
             <button className="iconBtn modalBack" onClick={onBack} aria-label="Back" type="button">
-              ←
+              <ArrowLeft size={18} strokeWidth={1.75} aria-hidden="true" />
             </button>
           ) : null}
           <div className="modalTitle" id={titleId}>
             {title}
           </div>
           <button className="iconBtn" onClick={onClose} aria-label="Close">
-            ✕
+            <X size={18} strokeWidth={1.75} aria-hidden="true" />
           </button>
         </div>
         <div className="modalBody">{children}</div>

@@ -1152,6 +1152,8 @@
   border-radius: 0.625rem;
   padding: 0.375rem 0.625rem;
   font-size: 0.875rem;
+  display: inline-grid;
+  place-items: center;
 }
 
 .accountTop {
@@ -1632,8 +1634,8 @@ a.connectRow {
 /* Points the way without spending a word of instruction on every row. */
 .connectGo {
   flex: 0 0 auto;
-  font-size: 1.25rem;
-  line-height: 1;
+  display: grid;
+  place-items: center;
   color: var(--muted);
   transition: transform 140ms ease, color 140ms ease;
 }
@@ -1645,6 +1647,9 @@ a.connectRow {
 
 .connectInstall {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1875rem;
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--muted);

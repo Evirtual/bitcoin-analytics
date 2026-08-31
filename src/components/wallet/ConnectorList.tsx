@@ -1,3 +1,4 @@
+import { ArrowUpRight, ChevronRight } from 'lucide-react'
 import { connectorInitials, connectorMark, type ConnectRow, type InstallRow } from '../../lib/wallet'
 
 function WalletMark({ name, icon }: { name: string; icon?: string | undefined }) {
@@ -31,7 +32,9 @@ export function ConnectorList<T extends { uid: string }>({
             <WalletMark name={row.name} icon={row.icon} />
             <div className="connectName">{row.name}</div>
           </div>
-          <span className="connectGo" aria-hidden="true">›</span>
+          <span className="connectGo" aria-hidden="true">
+            <ChevronRight size={18} strokeWidth={1.75} />
+          </span>
         </button>
       ))}
 
@@ -50,7 +53,10 @@ export function ConnectorList<T extends { uid: string }>({
                 <WalletMark name={install.name} />
                 <div className="connectName">{install.name}</div>
               </div>
-              <span className="connectInstall">Install</span>
+              <span className="connectInstall">
+                Install
+                <ArrowUpRight size={13} strokeWidth={2} aria-hidden="true" />
+              </span>
             </a>
           ))}
         </>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Copy } from 'lucide-react'
 import type { Address } from 'viem'
 import type { AssetKey, ChainId } from '../../assets/catalog'
 import { ASSETS } from '../../assets/catalog'
@@ -167,7 +168,7 @@ export function AccountModal({
                     title="Copy address"
                     disabled={!address}
                 >
-                    ⧉
+                    <Copy size={16} strokeWidth={1.75} aria-hidden="true" />
                 </button>
             </div>
             <div className="muted small" style={{ marginTop: '0.375em' }}>
