@@ -1,19 +1,29 @@
+import metaMaskIcon from '../../assets/metamask.svg'
+import walletConnectIcon from '../../assets/walletconnect.svg'
 import {
-  connectorBrandColor,
   connectorInitials,
+  normalizeConnectorName,
   type ConnectRow,
   type InstallRow,
 } from '../../lib/wallet'
 
+// A wallet discovered over EIP-6963 announces its own icon, which is why
+// Rabby and Brave arrive with theirs. The MetaMask SDK and WalletConnect
+// connectors announce none, so supply the marks their own packages ship.
+const CONNECTOR_ICONS: Record<string, string> = {
+  metamask: metaMaskIcon,
+  walletconnect: walletConnectIcon,
+}
+
+function markFor(name: string, icon: string | undefined): string | undefined {
+  return icon ?? CONNECTOR_ICONS[normalizeConnectorName(name)]
+}
+
 function WalletMark({ name, icon }: { name: string; icon?: string | undefined }) {
-  const brand = icon ? undefined : connectorBrandColor(name)
+  const src = markFor(name, icon)
   return (
-    <div
-      className="connectIcon"
-      aria-hidden="true"
-      style={brand ? { background: brand, borderColor: brand, color: '#fff' } : undefined}
-    >
-      {icon ? <img src={icon} alt="" /> : connectorInitials(name)}
+    <div className="connectIcon" aria-hidden="true">
+      {src ? <img src={src} alt="" /> : connectorInitials(name)}
     </div>
   )
 }
