@@ -1,6 +1,6 @@
 import { http, createConfig } from 'wagmi'
 import { base, bsc, mainnet } from 'wagmi/chains'
-import { injected, metaMask, walletConnect } from 'wagmi/connectors'
+import { injected, walletConnect } from 'wagmi/connectors'
 
 export const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as
   | string
@@ -22,12 +22,14 @@ const APP_DESCRIPTION = 'Market stats + multichain wallet balances'
 export const wagmiConfig = createConfig({
   chains: [mainnet, base, bsc],
   connectors: [
-    metaMask({
-      dappMetadata: {
-        name: APP_NAME,
-        url: dappUrl,
-      },
-    }),
+    // No MetaMask SDK connector. The extension announces itself over
+    // EIP-6963 and arrives with its own name and icon, so the SDK only ever
+    // covered the case where MetaMask is absent -- and it covered it badly:
+    // it reports to its own analytics endpoint in a retry loop, and on a
+    // desktop with no MetaMask installed it tries to launch metamask://,
+    // which no application answers. Where it is genuinely absent, an install
+    // link is the honest offer, and a phone reaches MetaMask through
+    // WalletConnect, which deep links to it properly.
     injected(),
     ...(walletConnectProjectId
       ? [
