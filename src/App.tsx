@@ -11,6 +11,7 @@ import { Header } from './components/dashboard/Header'
 import { MarketMoodCard } from './components/dashboard/MarketMoodCard'
 import { MarketDashboardMeta } from './components/dashboard/MarketDashboardMeta'
 import { AccountModal } from './components/wallet/AccountModal'
+import { WalletConnectQrModal } from './components/wallet/WalletConnectQrModal'
 import { ConnectWalletModal } from './components/wallet/ConnectWalletModal'
 import { SwapModal } from './components/swap/SwapModal'
 import { Toast } from './components/Toast'
@@ -130,6 +131,7 @@ function App() {
   const { disconnect } = useDisconnect()
 
   const [connectUiPending, setConnectUiPending] = useState(false)
+  const [walletConnectUri, setWalletConnectUri] = useState<string | undefined>(undefined)
   const [dashboardView, setDashboardView] = useState<'market' | 'portfolio'>('market')
   const [marketCardOrder, setMarketCardOrder] = useState<MarketCardId[]>(readMarketCardOrder)
   const [draggedMarketCard, setDraggedMarketCard] = useState<MarketCardId | null>(null)
@@ -182,10 +184,24 @@ function App() {
         }
       } finally {
         setConnectUiPending(false)
+        setWalletConnectUri(undefined)
       }
     },
     [connect, connectAsync, connectDisabled],
   )
+
+  // WalletConnect hands over a pairing URI instead of opening a modal of its
+  // own. It arrives on the connector, not from the connect() call.
+  useEffect(() => {
+    const connector = connectors.find((c) => c.id === 'walletConnect')
+    if (!connector) return
+
+    const onMessage = ({ type, data }: { type: string; data?: unknown }) => {
+      if (type === 'display_uri' && typeof data === 'string') setWalletConnectUri(data)
+    }
+    connector.emitter.on('message', onMessage)
+    return () => connector.emitter.off('message', onMessage)
+  }, [connectors])
 
   const chainIds = useMemo<ChainId[]>(() => [1, 8453, 56], [])
 
@@ -783,6 +799,13 @@ function App() {
           void runConnect(c)
         }}
       />
+
+      {walletConnectUri ? (
+        <WalletConnectQrModal
+          uri={walletConnectUri}
+          onClose={() => setWalletConnectUri(undefined)}
+        />
+      ) : null}
 
       <SwapModal
         open={swapOpen}

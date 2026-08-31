@@ -33,7 +33,11 @@ export const wagmiConfig = createConfig({
       ? [
           walletConnect({
             projectId: walletConnectProjectId,
-            showQrModal: true,
+            // The provider imports AppKit only to draw its own QR modal,
+            // and that import is gated on exactly this flag. Off, and the
+            // whole of AppKit stays out of the bundle; the connector still
+            // emits the pairing URI, which WalletConnectQrModal renders.
+            showQrModal: false,
             // Shown by the paired wallet while it asks the user to approve.
             metadata: {
               name: APP_NAME,

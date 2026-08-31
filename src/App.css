@@ -1594,3 +1594,27 @@ a.connectRow {
   margin: 0 0 0.75rem;
   line-height: 1.45;
 }
+
+/* WalletConnect pairing ------------------------------------------------ */
+
+/* The code has to stay light whatever the page theme is, or a dark surface
+   inverts it and wallets stop reading it. */
+.wcQr {
+  display: grid;
+  place-items: center;
+  padding: 0.875rem;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.wcOpenBtn {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+
+.wcHint {
+  margin: 0;
+  text-align: center;
+  line-height: 1.45;
+}
