@@ -48,6 +48,14 @@ export const appKit = createAppKit({
     url: dappUrl,
     icons: [dappUrl + '/icon-192.png'],
   },
+  // Off by default in AppKit, and it is the whole point here: it is what
+  // notices an extension wallet and lists it as already installed.
+  enableEIP6963: true,
+  // Neither is offered, and both cost more than their absence. The Coinbase SDK
+  // reports to cca-lite.coinbase.com on load -- blocked by most content
+  // blockers, so it only ever shows up as console noise.
+  enableCoinbase: false,
+  enableBaseAccount: false,
   // This is a read-only dashboard: it needs a wallet connected, and none of the
   // custodial or commerce surfaces AppKit can also render.
   features: {
