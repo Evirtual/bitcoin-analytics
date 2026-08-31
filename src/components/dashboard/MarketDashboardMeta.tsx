@@ -81,10 +81,11 @@ export function MarketDashboardMeta({ isRefreshing }: { isRefreshing: boolean })
             ) : null}
             <div className="infoTooltipTitle">How this data is fetched</div>
             <div className="infoTooltipRow">
-              <span className="infoTooltipKey">Spot price:</span> Coinbase spot API (fallback to Kraken).
+              <span className="infoTooltipKey">Spot price:</span> Kraken ticker (fallback to Coinbase).
             </div>
             <div className="infoTooltipRow">
-              <span className="infoTooltipKey">Charts:</span> Hourly candles from Coinbase Exchange (fallback to Kraken OHLC).
+              <span className="infoTooltipKey">Charts:</span> Hourly candles from Kraken OHLC (fallback to Coinbase
+              Exchange).
             </div>
             <div className="infoTooltipRow">
               <span className="infoTooltipKey">Sentiment:</span> Fear &amp; Greed Index from alternative.me.

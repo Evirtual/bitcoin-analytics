@@ -73,6 +73,19 @@ export const CURATED_WALLETS: readonly CuratedWallet[] = [
   { key: 'rabby', name: 'Rabby', installUrl: 'https://rabby.io/' },
 ]
 
+// A wallet discovered over EIP-6963 hands us its own icon. The MetaMask SDK
+// and WalletConnect connectors do not, and they are the two that always
+// appear, so they fall back to a lettered tile. Give that tile the brand
+// colour rather than shipping a redrawn logo that would be subtly wrong.
+const CONNECTOR_BRAND_COLORS: Record<string, string> = {
+  metamask: '#F6851B',
+  walletconnect: '#3B99FC',
+}
+
+export function connectorBrandColor(name: string): string | undefined {
+  return CONNECTOR_BRAND_COLORS[normalizeConnectorName(name)]
+}
+
 export function normalizeConnectorName(name: string): string {
   return name
     .trim()

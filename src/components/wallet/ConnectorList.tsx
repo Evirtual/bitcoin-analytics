@@ -1,8 +1,18 @@
-import { connectorInitials, type ConnectRow, type InstallRow } from '../../lib/wallet'
+import {
+  connectorBrandColor,
+  connectorInitials,
+  type ConnectRow,
+  type InstallRow,
+} from '../../lib/wallet'
 
 function WalletMark({ name, icon }: { name: string; icon?: string | undefined }) {
+  const brand = icon ? undefined : connectorBrandColor(name)
   return (
-    <div className="connectIcon" aria-hidden="true">
+    <div
+      className="connectIcon"
+      aria-hidden="true"
+      style={brand ? { background: brand, borderColor: brand, color: '#fff' } : undefined}
+    >
       {icon ? <img src={icon} alt="" /> : connectorInitials(name)}
     </div>
   )
