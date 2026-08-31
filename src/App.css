@@ -1543,13 +1543,10 @@
    ====================================================================== */
 
 .modalCompact {
-  /* Sized to the contents rather than to the dashboard: a 176px code, a short
-     list of chains, a column of wallets. A 42-character address wraps to two
-     lines at this width, which is the intended behaviour anyway -- it is
-     wrapped in full rather than truncated, because verifying an address means
-     reading its tail. Fitting one on a single line would take 27.5rem, which
-     is a lot of width to buy one line. */
-  width: min(24rem, calc(100vw - 1.75rem));
+  /* Sized to the two things that must not break across lines: the longest
+     network warning, and a 42-character address at a size it can actually be
+     read at. Both are measured, and 28rem is where they fit. */
+  width: min(28rem, calc(100vw - 1.75rem));
 }
 
 .modalBack {
@@ -1918,13 +1915,17 @@ a.connectRow {
 .supportAddressText {
   flex: 1 1 auto;
   min-width: 0;
-  /* One line at every width this window is given, phones included. An
-     address is checked by reading it, and a line break in the middle of one
-     is the thing that makes that hard -- so the type is sized against the
-     row rather than fixed, and shrinks instead of wrapping. Capped so it
-     never grows past the size the rest of the block is set in. */
+  /* One line, sized against the row that holds it. An address is checked by
+     reading it, so a break in the middle defeats the point -- but so does
+     type too small to read, which is what sizing purely to fit produced. It
+     is held between a floor it will not go under and the size the rest of
+     the block is set in. */
   white-space: nowrap;
-  font-size: min(0.8125rem, 2.35cqi);
+  font-size: clamp(0.625rem, 3.5cqi, 0.8125rem);
+  /* On the narrowest phones the floor wins and the line runs slightly long;
+     it scrolls rather than being cut off or shrunk out of legibility. */
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
 /* Sits against the address without inheriting its monospace or select-all. */
