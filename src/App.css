@@ -1542,9 +1542,12 @@
    ====================================================================== */
 
 .modalCompact {
-  /* Wide enough for a 42-character address on one line beside its copy
-     button, which is the widest thing either of these windows holds. Past
-     that the width is only air. */
+  /* Sized to the contents rather than to the dashboard: a 176px code, a short
+     list of chains, a column of wallets. A 42-character address wraps to two
+     lines at this width, which is the intended behaviour anyway -- it is
+     wrapped in full rather than truncated, because verifying an address means
+     reading its tail. Fitting one on a single line would take 27.5rem, which
+     is a lot of width to buy one line. */
   width: min(24rem, calc(100vw - 1.75rem));
 }
 
