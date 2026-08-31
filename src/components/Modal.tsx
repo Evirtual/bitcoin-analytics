@@ -4,6 +4,8 @@ type ModalProps = {
   open: boolean
   title: string
   onClose: () => void
+  /** Given for a step that has somewhere to go back to, which shows an arrow. */
+  onBack?: (() => void) | undefined
   children: React.ReactNode
 }
 
@@ -16,7 +18,7 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ')
 
-export function Modal({ open, title, onClose, children }: ModalProps) {
+export function Modal({ open, title, onClose, onBack, children }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
 
@@ -101,6 +103,11 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
         ref={dialogRef}
       >
         <div className="modalHeader">
+          {onBack ? (
+            <button className="iconBtn modalBack" onClick={onBack} aria-label="Back" type="button">
+              ←
+            </button>
+          ) : null}
           <div className="modalTitle" id={titleId}>
             {title}
           </div>

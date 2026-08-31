@@ -6,9 +6,6 @@ import { useAssetBalances } from '../../hooks/useAssetBalances'
 import { usd } from '../../lib/format'
 import { Modal } from '../Modal'
 import { AssetIcon } from '../AssetIcon'
-import { ConnectorList } from './ConnectorList'
-import { useWalletRows } from '../../hooks/useWalletRows'
-import type { ConnectorLike } from '../../lib/wallet'
 
 type GasRow = { chainName: string; formatted: string; symbol: string; error?: string }
 
@@ -69,14 +66,12 @@ function AssetBalanceDetails({
   )
 }
 
-export function AccountModal<T extends ConnectorLike>({
+export function AccountModal({
   open,
   onClose,
   isConnected,
   address,
-  connectors,
-  pendingUid,
-  onSelectConnector,
+  onOpenConnect,
   gas,
   onDisconnect,
   assetTotals,
@@ -88,9 +83,7 @@ export function AccountModal<T extends ConnectorLike>({
   onClose: () => void
   isConnected: boolean
   address: Address | undefined
-  connectors: readonly T[]
-  pendingUid?: string | undefined
-  onSelectConnector: (connector: T) => void
+  onOpenConnect: () => void
   gas: { isLoading: boolean; isRefetching?: boolean; data: GasRow[] | undefined; refetch?: () => unknown }
   onDisconnect: () => void
   assetTotals: { isLoading: boolean; isRefetching?: boolean; data: AssetTotal[] | undefined; refetch?: () => unknown }
@@ -98,7 +91,6 @@ export function AccountModal<T extends ConnectorLike>({
   chainIds: ChainId[]
   portfolioTotalUsd: number
 }) {
-  const walletRows = useWalletRows(connectors)
   const [expandedAssetKey, setExpandedAssetKey] = useState<AssetKey | null>(null)
 
   // Reset local UI state when closing, without triggering the "setState in effect" lint rule.
@@ -150,12 +142,10 @@ export function AccountModal<T extends ConnectorLike>({
       {!isConnected ? (
         <div className="stack">
           <div className="muted small">Not connected</div>
-          <ConnectorList
-            rows={walletRows.rows}
-            installs={walletRows.installs}
-            pendingUid={pendingUid}
-            onSelect={onSelectConnector}
-          />
+          {/* One connect flow, reached from here rather than repeated. */}
+          <button className="btn btnPrimary" type="button" onClick={onOpenConnect}>
+            Connect Wallet
+          </button>
         </div>
       ) : (
         <div className="stack">

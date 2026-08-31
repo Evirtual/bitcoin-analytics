@@ -11,7 +11,6 @@ import { Header } from './components/dashboard/Header'
 import { MarketMoodCard } from './components/dashboard/MarketMoodCard'
 import { MarketDashboardMeta } from './components/dashboard/MarketDashboardMeta'
 import { AccountModal } from './components/wallet/AccountModal'
-import { WalletConnectQrModal } from './components/wallet/WalletConnectQrModal'
 import { ConnectWalletModal } from './components/wallet/ConnectWalletModal'
 import { SwapModal } from './components/swap/SwapModal'
 import { Toast } from './components/Toast'
@@ -144,7 +143,7 @@ function App() {
 
   // On a cold start wagmi is still restoring the stored session, so showing an
   // enabled "Connect" would invite a second connection over the live one.
-  const connectDisabled = isConnecting || Boolean(pendingConnector) || accountStatus === 'reconnecting'
+  const connectDisabled = isConnecting || accountStatus === 'reconnecting'
   const activeDashboardView = isConnected ? dashboardView : 'market'
 
   const moveMarketCard = useCallback((from: MarketCardId, to: MarketCardId) => {
@@ -187,13 +186,12 @@ function App() {
       resetConnect()
       try {
         await connectAsync({ connector })
-        // Only on success: a failure leaves the list up so the reason can be
-        // read next to the wallet that produced it, and retried there.
+        setPendingConnector(undefined)
         setConnectOpen(false)
       } catch {
-        // Surfaced through `connectError` below.
+        // Stay on this wallet's step: the reason belongs next to the wallet
+        // that produced it, where it can be tried again.
       } finally {
-        setPendingConnector(undefined)
         setWalletConnectUri(undefined)
       }
     },
@@ -820,19 +818,26 @@ function App() {
           setConnectOpen(false)
         }}
         connectors={connectors}
-        pendingUid={pendingConnector?.uid}
-        errorText={pendingConnector ? undefined : connectErrorText}
+        pending={
+          pendingConnector
+            ? {
+                uid: pendingConnector.uid,
+                id: pendingConnector.id,
+                name: pendingConnector.name,
+                icon: pendingConnector.icon,
+              }
+            : undefined
+        }
+        walletConnectUri={walletConnectUri}
+        errorText={connectErrorText}
         onSelectConnector={(c) => void runConnect(c)}
         onRetry={() => {
-          if (pendingConnector) return
           const last = connectors.find((c) => c.uid === lastAttemptedUid.current)
           if (last) void runConnect(last)
         }}
+        onBack={cancelConnect}
       />
 
-      {walletConnectUri ? (
-        <WalletConnectQrModal uri={walletConnectUri} onClose={cancelConnect} />
-      ) : null}
 
       <SwapModal
         open={swapOpen}
@@ -847,11 +852,9 @@ function App() {
         onClose={() => setAccountOpen(false)}
         isConnected={isConnected}
         address={address}
-        connectors={connectors}
-        pendingUid={pendingConnector?.uid}
-        onSelectConnector={(c) => {
+        onOpenConnect={() => {
           setAccountOpen(false)
-          void runConnect(c)
+          setConnectOpen(true)
         }}
         gas={{ isLoading: gas.isLoading, isRefetching: gas.isRefetching, data: gas.data, refetch: gas.refetch }}
         onDisconnect={() => disconnect()}

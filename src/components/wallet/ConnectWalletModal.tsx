@@ -1,26 +1,84 @@
 import { Modal } from '../Modal'
 import { ConnectorList } from './ConnectorList'
+import { WalletConnectPairing } from './WalletConnectPairing'
 import { useWalletRows } from '../../hooks/useWalletRows'
-import type { ConnectorLike } from '../../lib/wallet'
+import { connectorMark, type ConnectorLike } from '../../lib/wallet'
 
+/**
+ * The whole connect flow, as one window that changes step.
+ *
+ * Picking a wallet used to close this and leave the user watching a header
+ * button, with a second window stacked on top for WalletConnect. Each step now
+ * replaces the last in place, and every one of them can be backed out of, so
+ * there is always a way to reach a different wallet.
+ */
 export function ConnectWalletModal<T extends ConnectorLike>({
   open,
   onClose,
   connectors,
-  pendingUid,
+  pending,
+  walletConnectUri,
   errorText,
   onSelectConnector,
   onRetry,
+  onBack,
 }: {
   open: boolean
   onClose: () => void
   connectors: readonly T[]
-  pendingUid?: string | undefined
+  /** The wallet being waited on. Its absence means we are back at the list. */
+  pending?: { uid: string; id: string; name: string; icon?: string | undefined } | undefined
+  walletConnectUri?: string | undefined
   errorText?: string | undefined
   onSelectConnector: (connector: T) => void
   onRetry: () => void
+  onBack: () => void
 }) {
   const { rows, installs, mobile, nothingDetected, hasWalletConnect } = useWalletRows(connectors)
+
+  // WalletConnect hands over a pairing request rather than opening a window of
+  // its own, so it gets its own step -- shown from the moment it is picked,
+  // because the request takes a second or two to arrive.
+  const pairing = pending?.id === 'walletConnect'
+
+  if (pending && pairing) {
+    return (
+      <Modal
+        open={open}
+        title={mobile ? 'Choose your wallet' : 'Scan with your wallet'}
+        onClose={onClose}
+        onBack={onBack}
+      >
+        <WalletConnectPairing uri={walletConnectUri} mobile={mobile} />
+      </Modal>
+    )
+  }
+
+  if (pending) {
+    return (
+      <Modal open={open} title={pending.name} onClose={onClose} onBack={onBack}>
+        <div className="connectStatus">
+          <div className="connectStatusMark">
+            {connectorMark(pending.name, pending.icon) ? (
+              <img src={connectorMark(pending.name, pending.icon)} alt="" />
+            ) : null}
+            <span className="connectStatusRing" aria-hidden="true" />
+          </div>
+          <div className="connectStatusTitle">
+            {errorText ? 'Could not connect' : `Continue in ${pending.name}`}
+          </div>
+          <p className="muted small connectStatusText">
+            {errorText ?? 'Approve the connection request in your wallet.'}
+          </p>
+          {errorText ? (
+            <button className="btn btnPrimary" type="button" onClick={onRetry}>
+              Try again
+            </button>
+          ) : null}
+        </div>
+      </Modal>
+    )
+  }
 
   return (
     <Modal open={open} title="Connect Wallet" onClose={onClose}>
@@ -33,15 +91,8 @@ export function ConnectWalletModal<T extends ConnectorLike>({
         </p>
       ) : null}
 
-      <ConnectorList
-        rows={rows}
-        installs={installs}
-        pendingUid={pendingUid}
-        onSelect={onSelectConnector}
-      />
+      <ConnectorList rows={rows} installs={installs} onSelect={onSelectConnector} />
 
-      {/* The wallet reports failures in its own window, which is gone by the
-          time the user looks back here, so the reason has to be repeated. */}
       {errorText ? (
         <div className="connectError" role="alert">
           <div className="connectErrorText">{errorText}</div>
@@ -49,12 +100,6 @@ export function ConnectWalletModal<T extends ConnectorLike>({
             Try again
           </button>
         </div>
-      ) : null}
-
-      {pendingUid ? (
-        <p className="muted small connectFoot">
-          Approve the request in your wallet. Closing this window cancels it.
-        </p>
       ) : null}
     </Modal>
   )

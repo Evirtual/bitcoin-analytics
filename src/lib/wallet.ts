@@ -1,3 +1,6 @@
+import metaMaskIcon from '../assets/metamask.svg'
+import walletConnectIcon from '../assets/walletconnect.svg'
+
 export function connectorInitials(name: string): string {
   const cleaned = name
     .replace(/\(.*?\)/g, ' ')
@@ -72,6 +75,19 @@ export const CURATED_WALLETS: readonly CuratedWallet[] = [
   { key: 'metamask', name: 'MetaMask', installUrl: 'https://metamask.io/download/' },
   { key: 'rabby', name: 'Rabby', installUrl: 'https://rabby.io/' },
 ]
+
+// A wallet announced over EIP-6963 carries its own icon. The MetaMask SDK
+// and WalletConnect connectors carry none, so supply the marks their own
+// packages ship rather than falling back to letters for the two that are
+// always on the list.
+const CONNECTOR_ICONS: Record<string, string> = {
+  metamask: metaMaskIcon,
+  walletconnect: walletConnectIcon,
+}
+
+export function connectorMark(name: string, icon?: string | undefined): string | undefined {
+  return icon ?? CONNECTOR_ICONS[normalizeConnectorName(name)]
+}
 
 export function normalizeConnectorName(name: string): string {
   return name
