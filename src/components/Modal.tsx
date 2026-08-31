@@ -6,6 +6,8 @@ type ModalProps = {
   onClose: () => void
   /** Given for a step that has somewhere to go back to, which shows an arrow. */
   onBack?: (() => void) | undefined
+  /** 'compact' narrows the window for a single-column flow. */
+  size?: 'default' | 'compact' | undefined
   children: React.ReactNode
 }
 
@@ -18,7 +20,7 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ')
 
-export function Modal({ open, title, onClose, onBack, children }: ModalProps) {
+export function Modal({ open, title, onClose, onBack, size, children }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
 
@@ -95,7 +97,7 @@ export function Modal({ open, title, onClose, onBack, children }: ModalProps) {
     <div className="modalOverlay">
       <div className="modalBackdrop" onClick={onClose} />
       <div
-        className="modal"
+        className={size === 'compact' ? 'modal modalCompact' : 'modal'}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

@@ -1151,53 +1151,6 @@
   font-size: 0.875rem;
 }
 
-.connectRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.625rem;
-  width: 100%;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
-  border: 0.0625rem solid var(--stroke);
-  background: var(--card2);
-}
-
-.connectLeft {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  min-width: 0;
-}
-
-.connectIcon {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.625rem;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  border: 0.0625rem solid var(--stroke);
-  background: var(--card2);
-  color: var(--textStrong);
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
-.connectRow:hover {
-  border-color: color-mix(in srgb, var(--stroke) 65%, var(--accent) 35%);
-  background: var(--card);
-}
-
-.connectRow:disabled {
-  opacity: 0.72;
-  cursor: not-allowed;
-}
-
-.connectName {
-  font-weight: 800;
-}
-
 .accountTop {
   display: flex;
   align-items: flex-start;
@@ -1567,71 +1520,139 @@
   }
 }
 
-/* Wallet connect rows -------------------------------------------------- */
+/* ======================================================================
+   Connect flow
+   A single column of choices, so it reads narrower than the dashboard's
+   windows and every step keeps the same rhythm.
+   ====================================================================== */
 
-.connectIcon img {
+.modalCompact {
+  width: min(23.5rem, calc(100vw - 1.75rem));
+}
+
+.modalBack {
+  margin-right: 0.125rem;
+}
+
+/* --- the list ------------------------------------------------------- */
+
+.connectHint {
+  margin: 0 0 0.875rem;
+  line-height: 1.5;
+}
+
+.connectRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  object-fit: contain;
-  display: block;
+  min-height: 3.75rem;
+  padding: 0.6875rem 0.875rem;
+  border-radius: 0.875rem;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+  text-align: left;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
 }
 
 /* Install entries are links, not buttons, so undo the anchor defaults. */
 a.connectRow {
   text-decoration: none;
   color: inherit;
-  cursor: pointer;
+}
+
+.connectRow:hover {
+  background: var(--card);
+  border-color: color-mix(in srgb, var(--stroke) 55%, var(--accent) 45%);
+}
+
+.connectRow:active {
+  transform: scale(0.99);
+}
+
+.connectRow:focus-visible {
+  outline: 0.125rem solid var(--accent);
+  outline-offset: 0.125rem;
+}
+
+.connectLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.connectIcon {
+  width: 2.375rem;
+  height: 2.375rem;
+  border-radius: 0.75rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card);
+  color: var(--textStrong);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.connectIcon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.connectName {
+  font-weight: 700;
+  font-size: 0.9375rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Points the way without spending a word of instruction on every row. */
+.connectGo {
+  flex: 0 0 auto;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--muted);
+  transition: transform 140ms ease, color 140ms ease;
+}
+
+.connectRow:hover .connectGo {
+  color: var(--accent);
+  transform: translateX(0.125rem);
+}
+
+.connectInstall {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  border: 0.0625rem solid var(--stroke);
+}
+
+.connectRow:hover .connectInstall {
+  color: var(--textStrong);
+  border-color: color-mix(in srgb, var(--stroke) 55%, var(--accent) 45%);
 }
 
 .connectDivider {
-  padding: 0.25rem 0.125rem 0;
+  padding: 0.625rem 0.125rem 0;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.connectHint {
-  margin: 0 0 0.75rem;
-  line-height: 1.45;
-}
-
-/* WalletConnect pairing ------------------------------------------------ */
-
-/* The code has to stay light whatever the page theme is, or a dark surface
-   inverts it and wallets stop reading it. */
-.wcQr {
-  display: grid;
-  place-items: center;
-  padding: 0.875rem;
-  border-radius: 0.75rem;
-  background: #fff;
-}
-
-.wcOpenBtn {
-  display: block;
-  text-align: center;
-  text-decoration: none;
-  /* .btn sets no colour, so an anchor would take the browser link blue. */
-  color: inherit;
-}
-
-.wcHint {
-  margin: 0;
-  text-align: center;
-  line-height: 1.45;
-}
-
-/* Connect states ------------------------------------------------------- */
-
-/* A dot that keeps moving, so a wallet that never answers still looks like
-   something is outstanding rather than finished. */
-
-@keyframes connectPulse {
-  0%, 100% { opacity: 0.25; }
-  50% { opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
+  letter-spacing: 0.08em;
+  font-size: 0.6875rem;
+  font-weight: 700;
 }
 
 .connectError {
@@ -1639,26 +1660,96 @@ a.connectRow {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-top: 0.75rem;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
+  margin-top: 0.875rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: 0.875rem;
   border: 0.0625rem solid color-mix(in srgb, var(--stroke) 55%, #ef4444 45%);
   background: color-mix(in srgb, var(--card2) 82%, #ef4444 18%);
 }
 
 .connectErrorText {
   font-size: 0.8125rem;
-  line-height: 1.4;
+  line-height: 1.45;
   min-width: 0;
 }
 
-/* WalletConnect wallet directory --------------------------------------- */
+/* --- waiting on one wallet ------------------------------------------ */
+
+.connectStatus {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.875rem;
+  padding: 1.75rem 0.5rem 1rem;
+}
+
+.connectStatusMark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+}
+
+.connectStatusMark img {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 1rem;
+  object-fit: contain;
+  display: block;
+}
+
+/* Turns around the wallet's own mark, so the wait belongs to the thing being
+   waited on rather than floating beside it. */
+.connectStatusRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 0.125rem solid color-mix(in srgb, var(--stroke) 60%, transparent);
+  border-top-color: var(--accent);
+  animation: connectSpin 0.9s linear infinite;
+}
+
+.connectStatusTitle {
+  font-weight: 800;
+  font-size: 1.0625rem;
+  letter-spacing: -0.01em;
+}
+
+.connectStatusText {
+  margin: 0;
+  max-width: 20rem;
+  line-height: 1.5;
+}
+
+/* --- pairing --------------------------------------------------------- */
+
+.wcSearch {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.wcSearch::placeholder {
+  color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+.wcSearch:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--stroke) 45%, var(--accent) 55%);
+}
 
 .wcWalletGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(4.25rem, 1fr));
   gap: 0.5rem;
-  max-height: 17rem;
+  max-height: 17.5rem;
   overflow-y: auto;
   padding: 0.125rem;
 }
@@ -1667,31 +1758,33 @@ a.connectRow {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.5rem 0.25rem;
-  border-radius: 0.75rem;
+  gap: 0.4375rem;
+  padding: 0.625rem 0.25rem;
+  border-radius: 0.875rem;
   border: 0.0625rem solid var(--stroke);
   background: var(--card2);
   text-decoration: none;
   color: inherit;
+  transition: background 140ms ease, border-color 140ms ease;
 }
 
 .wcWallet:hover {
-  border-color: color-mix(in srgb, var(--stroke) 65%, var(--accent) 35%);
   background: var(--card);
+  border-color: color-mix(in srgb, var(--stroke) 55%, var(--accent) 45%);
 }
 
 .wcWalletIcon {
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: 0.625rem;
+  border-radius: 0.75rem;
   object-fit: cover;
   display: block;
 }
 
 .wcWalletName {
   font-size: 0.6875rem;
-  line-height: 1.2;
+  font-weight: 600;
+  line-height: 1.25;
   text-align: center;
   /* Names run long; two lines then stop rather than shoving the grid around. */
   display: -webkit-box;
@@ -1700,76 +1793,8 @@ a.connectRow {
   overflow: hidden;
 }
 
-/* Connect lifecycle ---------------------------------------------------- */
-
-.modalBack {
-  margin-right: 0.5rem;
-}
-
-.connectStatus {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 0.75rem;
-  padding: 1.25rem 0.5rem 0.5rem;
-}
-
-.connectStatusMark {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 4rem;
-  height: 4rem;
-}
-
-.connectStatusMark img {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 0.875rem;
-  object-fit: contain;
-  display: block;
-}
-
-/* Turns around the wallet's own mark, so the wait is attached to the thing
-   being waited on rather than floating next to it. */
-.connectStatusRing {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 0.125rem solid color-mix(in srgb, var(--stroke) 70%, transparent);
-  border-top-color: var(--accent);
-  animation: connectSpin 0.9s linear infinite;
-}
-
-.connectStatusTitle {
-  font-weight: 800;
-  font-size: 1rem;
-}
-
-.connectStatusText {
-  margin: 0;
-  max-width: 22rem;
-  line-height: 1.5;
-}
-
-.wcQrWaiting {
-  min-height: 15.5rem;
-  display: grid;
-  place-items: center;
-}
-
-.wcQrSpinner {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  border: 0.1875rem solid rgba(0, 0, 0, 0.12);
-  border-top-color: rgba(0, 0, 0, 0.5);
-  animation: connectSpin 0.9s linear infinite;
-}
-
 .wcWalletWaiting {
-  opacity: 0.55;
+  opacity: 0.5;
   pointer-events: none;
 }
 
@@ -1789,6 +1814,35 @@ a.connectRow {
   border-radius: 0.25rem;
 }
 
+/* The code stays light whatever the page theme is; inverted on a dark surface,
+   wallets stop reading it. */
+.wcQr {
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  border-radius: 0.875rem;
+  background: #fff;
+}
+
+.wcQrWaiting {
+  min-height: 16.5rem;
+}
+
+.wcQrSpinner {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 0.1875rem solid rgba(0, 0, 0, 0.12);
+  border-top-color: rgba(0, 0, 0, 0.5);
+  animation: connectSpin 0.9s linear infinite;
+}
+
+.wcHint {
+  margin: 0;
+  text-align: center;
+  line-height: 1.5;
+}
+
 @keyframes connectSpin {
   to {
     transform: rotate(360deg);
@@ -1796,35 +1850,26 @@ a.connectRow {
 }
 
 @keyframes connectPulse {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 0.75; }
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.75;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .connectRow,
+  .connectGo,
+  .wcWallet {
+    transition: none;
+  }
+
   .connectStatusRing,
   .wcQrSpinner,
   .wcSkeletonBlock,
   .wcSkeletonLine {
     animation: none;
   }
-}
-
-.wcSearch {
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  border-radius: 0.625rem;
-  border: 0.0625rem solid var(--stroke);
-  background: var(--card2);
-  color: inherit;
-  font: inherit;
-  font-size: 0.875rem;
-}
-
-.wcSearch::placeholder {
-  color: color-mix(in srgb, currentColor 45%, transparent);
-}
-
-.wcSearch:focus {
-  outline: none;
-  border-color: color-mix(in srgb, var(--stroke) 45%, var(--accent) 55%);
 }

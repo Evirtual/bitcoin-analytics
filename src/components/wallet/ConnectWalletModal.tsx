@@ -44,6 +44,7 @@ export function ConnectWalletModal<T extends ConnectorLike>({
   if (pending && pairing) {
     return (
       <Modal
+        size="compact"
         open={open}
         title="WalletConnect"
         onClose={onClose}
@@ -56,7 +57,7 @@ export function ConnectWalletModal<T extends ConnectorLike>({
 
   if (pending) {
     return (
-      <Modal open={open} title={pending.name} onClose={onClose} onBack={onBack}>
+      <Modal size="compact" open={open} title={pending.name} onClose={onClose} onBack={onBack}>
         <div className="connectStatus">
           <div className="connectStatusMark">
             {connectorMark(pending.name, pending.icon) ? (
@@ -81,7 +82,7 @@ export function ConnectWalletModal<T extends ConnectorLike>({
   }
 
   return (
-    <Modal open={open} title="Connect Wallet" onClose={onClose}>
+    <Modal size="compact" open={open} title="Connect Wallet" onClose={onClose}>
       {mobile && nothingDetected ? (
         <p className="muted small connectHint">
           No wallet was found in this browser.{' '}

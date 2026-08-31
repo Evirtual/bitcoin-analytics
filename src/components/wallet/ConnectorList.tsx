@@ -31,7 +31,7 @@ export function ConnectorList<T extends { uid: string }>({
             <WalletMark name={row.name} icon={row.icon} />
             <div className="connectName">{row.name}</div>
           </div>
-          <div className="muted small">Select</div>
+          <span className="connectGo" aria-hidden="true">›</span>
         </button>
       ))}
 
@@ -50,7 +50,7 @@ export function ConnectorList<T extends { uid: string }>({
                 <WalletMark name={install.name} />
                 <div className="connectName">{install.name}</div>
               </div>
-              <div className="muted small">Install ↗</div>
+              <span className="connectInstall">Install</span>
             </a>
           ))}
         </>
