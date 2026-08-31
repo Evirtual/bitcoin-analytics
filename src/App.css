@@ -1562,7 +1562,15 @@
     transform 140ms ease;
 }
 
-/* Install entries are links, not buttons, so undo the anchor defaults. */
+/* Install entries are links, not buttons, so undo the anchor defaults. There
+   is no global box-sizing reset here: buttons get border-box from the control
+   reset, anchors do not, so width:100% plus the padding overflowed the column. */
+a.connectRow,
+.wcWallet,
+.wcSearch {
+  box-sizing: border-box;
+}
+
 a.connectRow {
   text-decoration: none;
   color: inherit;
