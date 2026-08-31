@@ -1808,3 +1808,23 @@ a.connectRow {
     animation: none;
   }
 }
+
+.wcSearch {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.625rem;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.wcSearch::placeholder {
+  color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+.wcSearch:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--stroke) 45%, var(--accent) 55%);
+}

@@ -12,8 +12,12 @@ import { walletConnectProjectId } from '../wagmi'
  */
 const EXPLORER = 'https://explorer-api.walletconnect.com/v3'
 
-/** Enough to choose from without turning the list into a scroll marathon. */
-const ENTRIES = 16
+/**
+ * Deep enough that searching has something to find. The registry runs to
+ * several hundred; this is the popular end of it, filtered in the browser so
+ * typing costs no further requests.
+ */
+const ENTRIES = 60
 
 export type DirectoryWallet = {
   id: string

@@ -45,7 +45,7 @@ export function ConnectWalletModal<T extends ConnectorLike>({
     return (
       <Modal
         open={open}
-        title={mobile ? 'Choose your wallet' : 'Scan with your wallet'}
+        title="WalletConnect"
         onClose={onClose}
         onBack={onBack}
       >
