@@ -67,7 +67,7 @@ export function MarketDashboardMeta({ isRefreshing }: { isRefreshing: boolean })
           onBlur={() => (isMobile ? undefined : setInfoFocus(false))}
           onClick={() => setInfoPinned((v) => !v)}
         >
-          <Info size={15} strokeWidth={2} aria-hidden="true" />
+          <Info size={17} strokeWidth={1.9} aria-hidden="true" />
         </button>
         {infoOpen ? (
           <div

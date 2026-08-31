@@ -134,15 +134,23 @@
 }
 
 .infoBtn {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
   padding: 0;
+  border: none;
+  background: none;
   border-radius: 999rem;
   display: grid;
   place-items: center;
-  font-size: 0.75rem;
   line-height: 1;
   color: var(--muted);
+}
+
+.infoBtn:hover,
+.infoBtn:focus-visible {
+  border-color: transparent;
+  background: none;
+  color: var(--textStrong);
 }
 
 .infoTooltip {
@@ -1149,8 +1157,10 @@
 }
 
 .iconBtn {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
   border-radius: 0.625rem;
-  padding: 0.375rem 0.625rem;
   font-size: 0.875rem;
   display: inline-grid;
   place-items: center;
