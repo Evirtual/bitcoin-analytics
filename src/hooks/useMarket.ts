@@ -63,19 +63,29 @@ function coinbaseDownKey(kind: 'spot' | 'candles') {
   return `market.coinbase.${kind}.downUntil`
 }
 
+// Mirrored in memory so the backoff still holds when storage is unavailable,
+// as it is in a private window.
+const downUntilMemory: Record<string, number> = {}
+
 function readDownUntil(kind: 'spot' | 'candles'): number {
+  const remembered = downUntilMemory[kind] ?? 0
   try {
-    const raw = sessionStorage.getItem(coinbaseDownKey(kind))
+    // localStorage rather than session: an installed app is relaunched often,
+    // and per-session state meant every launch re-ran the whole failing sweep
+    // before falling back. Someone whose network blocks Coinbase outright paid
+    // that on every cold start.
+    const raw = localStorage.getItem(coinbaseDownKey(kind))
     const n = raw ? Number(raw) : 0
-    return Number.isFinite(n) ? n : 0
+    return Math.max(remembered, Number.isFinite(n) ? n : 0)
   } catch {
-    return 0
+    return remembered
   }
 }
 
 function setDownUntil(kind: 'spot' | 'candles', until: number) {
+  downUntilMemory[kind] = until
   try {
-    sessionStorage.setItem(coinbaseDownKey(kind), String(until))
+    localStorage.setItem(coinbaseDownKey(kind), String(until))
   } catch {
     // ignore
   }
