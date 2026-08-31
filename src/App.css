@@ -1939,3 +1939,13 @@ a.connectRow {
 .supportCopyBtn:hover {
   color: var(--textStrong);
 }
+
+/* At phone widths the address type hits its floor and the line runs about eight
+   pixels long, which is enough to make it scroll. Take those pixels back from
+   the padding instead: the line is what has to fit, not the gutter. */
+@media (max-width: 30rem) {
+  .supportAddress {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
