@@ -1542,7 +1542,10 @@
    ====================================================================== */
 
 .modalCompact {
-  width: min(23.5rem, calc(100vw - 1.75rem));
+  /* Wide enough for a 42-character address on one line beside its copy
+     button, which is the widest thing either of these windows holds. Past
+     that the width is only air. */
+  width: min(24rem, calc(100vw - 1.75rem));
 }
 
 .modalBack {

@@ -135,7 +135,7 @@ export function SupportDeveloperModal({
 
   return (
     <>
-      <Modal open={open} title="Support the developer" onClose={handleClose}>
+      <Modal size="compact" open={open} title="Support the developer" onClose={handleClose}>
         <div className="supportIntro">
           Donations are optional. Please double-check the network before sending.
         </div>
