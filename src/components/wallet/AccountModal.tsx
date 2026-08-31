@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Copy } from 'lucide-react'
+import { ChevronDown, Copy } from 'lucide-react'
 import type { Address } from 'viem'
 import type { AssetKey, ChainId } from '../../assets/catalog'
 import { ASSETS } from '../../assets/catalog'
@@ -236,7 +236,7 @@ export function AccountModal({
                           <div className="rowSub muted">{v !== undefined ? usd.format(v) : '—'}</div>
                         </div>
                         <div className={expanded ? 'assetRowChevron assetRowChevronOpen' : 'assetRowChevron'} aria-hidden="true">
-                          ▾
+                          <ChevronDown size={18} strokeWidth={1.75} />
                         </div>
                       </div>
                     </button>

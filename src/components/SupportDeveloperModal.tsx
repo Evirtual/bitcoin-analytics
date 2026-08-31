@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ChevronDown, Copy } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import type { AssetKey } from '../assets/catalog'
 import { AssetIcon } from './AssetIcon'
@@ -163,7 +164,7 @@ export function SupportDeveloperModal({
                     className={expanded ? 'assetRowChevron assetRowChevronOpen' : 'assetRowChevron'}
                     aria-hidden="true"
                   >
-                    ▾
+                    <ChevronDown size={18} strokeWidth={1.75} />
                   </div>
                 </button>
 
@@ -187,17 +188,21 @@ export function SupportDeveloperModal({
                         verify an address by its last characters, so hiding the
                         tail defeats the check they came here to make. */}
                     <div className="supportAddress" aria-label={`${t.label} address`}>
-                      {t.address}
+                      <span className="supportAddressText">{t.address}</span>
+                      {/* Beside the address rather than below it: copying is what
+                          most people came for, and it should not need a hunt. */}
+                      <button
+                        className="iconBtn supportCopyBtn"
+                        type="button"
+                        onClick={() => onCopy(t.label, t.address)}
+                        aria-label={`Copy ${t.label} address`}
+                        title="Copy address"
+                      >
+                        <Copy size={16} strokeWidth={1.75} aria-hidden="true" />
+                      </button>
                     </div>
 
                     <div className="supportActions">
-                      <button
-                        className="btn supportActionBtn"
-                        type="button"
-                        onClick={() => onCopy(t.label, t.address)}
-                      >
-                        Copy address
-                      </button>
                       <a
                         className="btn supportActionBtn"
                         href={t.explorer.url}
