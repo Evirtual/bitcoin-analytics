@@ -62,7 +62,7 @@ export function ConnectWalletModal<T extends ConnectorLike>({
             {connectorMark(pending.name, pending.icon) ? (
               <img src={connectorMark(pending.name, pending.icon)} alt="" />
             ) : null}
-            <span className="connectStatusRing" aria-hidden="true" />
+            {errorText ? null : <span className="connectStatusRing" aria-hidden="true" />}
           </div>
           <div className="connectStatusTitle">
             {errorText ? 'Could not connect' : `Continue in ${pending.name}`}

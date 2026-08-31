@@ -517,7 +517,7 @@ function App() {
       />
 
       <Toast
-        open={connectToastOpen}
+        open={connectToastOpen && !connectOpen}
         variant="error"
         message={connectErrorText ?? ''}
         onClose={() => setDismissedConnectError(connectErrorText)}
