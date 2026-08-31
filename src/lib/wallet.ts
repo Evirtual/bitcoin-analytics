@@ -64,24 +64,13 @@ export type CuratedWallet = {
   /** Normalised name, used to match against a connector. */
   key: string
   name: string
-  /** Where to send someone who does not have it yet. */
-  extensionUrl: string
-  mobileUrl: string
+  /** Where to send someone whose browser does not have the extension. */
+  installUrl: string
 }
 
 export const CURATED_WALLETS: readonly CuratedWallet[] = [
-  {
-    key: 'metamask',
-    name: 'MetaMask',
-    extensionUrl: 'https://metamask.io/download/',
-    mobileUrl: 'https://metamask.io/download/',
-  },
-  {
-    key: 'rabby',
-    name: 'Rabby',
-    extensionUrl: 'https://rabby.io/',
-    mobileUrl: 'https://rabby.io/',
-  },
+  { key: 'metamask', name: 'MetaMask', installUrl: 'https://metamask.io/download/' },
+  { key: 'rabby', name: 'Rabby', installUrl: 'https://rabby.io/' },
 ]
 
 export function normalizeConnectorName(name: string): string {
@@ -187,11 +176,17 @@ export function buildWalletRows<T extends ConnectorLike>(
     ...rows.filter((row) => REMOTE_CONNECTOR_IDS.has(row.connector.id)),
   ]
 
-  const installs = CURATED_WALLETS.filter((wallet) => !seen.has(wallet.key)).map((wallet) => ({
-    key: wallet.key,
-    name: wallet.name,
-    url: options.mobile ? wallet.mobileUrl : wallet.extensionUrl,
-  }))
+  // Only extensions can be detected, and only a desktop browser has them. A
+  // phone cannot see which wallet apps are installed, so calling one "not
+  // installed" there is a guess -- and a wrong one for anyone who has the app.
+  // WalletConnect already lists the apps that are actually on the device.
+  const installs = options.mobile
+    ? []
+    : CURATED_WALLETS.filter((wallet) => !seen.has(wallet.key)).map((wallet) => ({
+        key: wallet.key,
+        name: wallet.name,
+        url: wallet.installUrl,
+      }))
 
   return { rows: ordered, installs }
 }
