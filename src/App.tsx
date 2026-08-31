@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
 import { useAssetBalances, useUserAssetTotals } from './hooks/useAssetBalances'
@@ -123,14 +123,19 @@ function App() {
   const { address, isConnected, chain, status: accountStatus } = useAccount()
   const {
     connectors,
-    connect,
     connectAsync,
     isPending: isConnecting,
     error: connectError,
+    reset: resetConnect,
   } = useConnect()
   const { disconnect } = useDisconnect()
 
-  const [connectUiPending, setConnectUiPending] = useState(false)
+  const [connectOpen, setConnectOpen] = useState(false)
+  // The wallet being waited on, kept rather than a plain boolean so the row
+  // can say which one, and so "Try again" knows what to retry.
+  const [pendingConnector, setPendingConnector] = useState<(typeof connectors)[number] | undefined>(
+    undefined,
+  )
   const [walletConnectUri, setWalletConnectUri] = useState<string | undefined>(undefined)
   const [dashboardView, setDashboardView] = useState<'market' | 'portfolio'>('market')
   const [marketCardOrder, setMarketCardOrder] = useState<MarketCardId[]>(readMarketCardOrder)
@@ -139,7 +144,7 @@ function App() {
 
   // On a cold start wagmi is still restoring the stored session, so showing an
   // enabled "Connect" would invite a second connection over the live one.
-  const connectDisabled = isConnecting || connectUiPending || accountStatus === 'reconnecting'
+  const connectDisabled = isConnecting || Boolean(pendingConnector) || accountStatus === 'reconnecting'
   const activeDashboardView = isConnected ? dashboardView : 'market'
 
   const moveMarketCard = useCallback((from: MarketCardId, to: MarketCardId) => {
@@ -170,25 +175,45 @@ function App() {
     return () => window.clearTimeout(t)
   }, [connectErrorText, connectToastOpen])
 
+  // "Try again" needs to know what failed, and the failure clears the pending
+  // connector by definition.
+  const lastAttemptedUid = useRef<string | undefined>(undefined)
+
   const runConnect = useCallback(
     async (connector: (typeof connectors)[number]) => {
-      if (connectDisabled) return
-
-      setConnectUiPending(true)
+      lastAttemptedUid.current = connector.uid
+      setPendingConnector(connector)
       setDismissedConnectError(undefined)
+      resetConnect()
       try {
-        if (connectAsync) {
-          await connectAsync({ connector })
-        } else {
-          connect({ connector })
-        }
+        await connectAsync({ connector })
+        // Only on success: a failure leaves the list up so the reason can be
+        // read next to the wallet that produced it, and retried there.
+        setConnectOpen(false)
+      } catch {
+        // Surfaced through `connectError` below.
       } finally {
-        setConnectUiPending(false)
+        setPendingConnector(undefined)
         setWalletConnectUri(undefined)
       }
     },
-    [connect, connectAsync, connectDisabled],
+    [connectAsync, resetConnect],
   )
+
+  /**
+   * Abandoning a request has to reach the connector, not just the UI.
+   *
+   * A pairing that is never answered leaves wagmi sat in `connecting`, which
+   * is what made the button read "Connecting..." with no way back. Ending it
+   * at the connector rejects that attempt, and wagmi returns to disconnected.
+   */
+  const cancelConnect = useCallback(() => {
+    setWalletConnectUri(undefined)
+    setPendingConnector(undefined)
+    const pending = pendingConnector
+    void pending?.disconnect().catch(() => {})
+    resetConnect()
+  }, [pendingConnector, resetConnect])
 
   // WalletConnect hands over a pairing URI instead of opening a modal of its
   // own. It arrives on the connector, not from the connect() call.
@@ -287,7 +312,6 @@ function App() {
       .join(' / ')
   }, [gas.data, gas.isLoading])
 
-  const [connectOpen, setConnectOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [swapOpen, setSwapOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
@@ -791,20 +815,23 @@ function App() {
 
       <ConnectWalletModal
         open={connectOpen}
-        onClose={() => setConnectOpen(false)}
-        connectors={connectors}
-        disabled={connectDisabled}
-        onSelectConnector={(c) => {
+        onClose={() => {
+          cancelConnect()
           setConnectOpen(false)
-          void runConnect(c)
+        }}
+        connectors={connectors}
+        pendingUid={pendingConnector?.uid}
+        errorText={pendingConnector ? undefined : connectErrorText}
+        onSelectConnector={(c) => void runConnect(c)}
+        onRetry={() => {
+          if (pendingConnector) return
+          const last = connectors.find((c) => c.uid === lastAttemptedUid.current)
+          if (last) void runConnect(last)
         }}
       />
 
       {walletConnectUri ? (
-        <WalletConnectQrModal
-          uri={walletConnectUri}
-          onClose={() => setWalletConnectUri(undefined)}
-        />
+        <WalletConnectQrModal uri={walletConnectUri} onClose={cancelConnect} />
       ) : null}
 
       <SwapModal
@@ -821,7 +848,7 @@ function App() {
         isConnected={isConnected}
         address={address}
         connectors={connectors}
-        disabled={connectDisabled}
+        pendingUid={pendingConnector?.uid}
         onSelectConnector={(c) => {
           setAccountOpen(false)
           void runConnect(c)

@@ -75,7 +75,7 @@ export function AccountModal<T extends ConnectorLike>({
   isConnected,
   address,
   connectors,
-  disabled,
+  pendingUid,
   onSelectConnector,
   gas,
   onDisconnect,
@@ -89,7 +89,7 @@ export function AccountModal<T extends ConnectorLike>({
   isConnected: boolean
   address: Address | undefined
   connectors: readonly T[]
-  disabled: boolean
+  pendingUid?: string | undefined
   onSelectConnector: (connector: T) => void
   gas: { isLoading: boolean; isRefetching?: boolean; data: GasRow[] | undefined; refetch?: () => unknown }
   onDisconnect: () => void
@@ -153,7 +153,7 @@ export function AccountModal<T extends ConnectorLike>({
           <ConnectorList
             rows={walletRows.rows}
             installs={walletRows.installs}
-            disabled={disabled}
+            pendingUid={pendingUid}
             onSelect={onSelectConnector}
           />
         </div>

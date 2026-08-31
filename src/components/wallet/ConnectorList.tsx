@@ -7,9 +7,9 @@ import {
   type InstallRow,
 } from '../../lib/wallet'
 
-// A wallet discovered over EIP-6963 announces its own icon, which is why
-// Rabby and Brave arrive with theirs. The MetaMask SDK and WalletConnect
-// connectors announce none, so supply the marks their own packages ship.
+// A wallet discovered over EIP-6963 announces its own icon, which is why Rabby
+// and Brave arrive with theirs. The MetaMask SDK and WalletConnect connectors
+// announce none, so supply the marks their own packages ship.
 const CONNECTOR_ICONS: Record<string, string> = {
   metamask: metaMaskIcon,
   walletconnect: walletConnectIcon,
@@ -31,31 +31,40 @@ function WalletMark({ name, icon }: { name: string; icon?: string | undefined })
 export function ConnectorList<T extends { uid: string }>({
   rows,
   installs,
-  disabled,
+  pendingUid,
   onSelect,
 }: {
   rows: readonly ConnectRow<T>[]
   installs: readonly InstallRow[]
-  disabled: boolean
+  /** The wallet currently being waited on, if any. */
+  pendingUid?: string | undefined
   onSelect: (connector: T) => void
 }) {
   return (
     <div className="stack">
-      {rows.map((row) => (
-        <button
-          key={row.connector.uid}
-          className="connectRow"
-          onClick={() => onSelect(row.connector)}
-          disabled={disabled}
-          type="button"
-        >
-          <div className="connectLeft">
-            <WalletMark name={row.name} icon={row.icon} />
-            <div className="connectName">{row.name}</div>
-          </div>
-          <div className="muted small">Select</div>
-        </button>
-      ))}
+      {rows.map((row) => {
+        const pending = pendingUid === row.connector.uid
+        // While one wallet is being waited on, the others would only queue up a
+        // second request behind it.
+        const disabled = Boolean(pendingUid) && !pending
+        return (
+          <button
+            key={row.connector.uid}
+            className={pending ? 'connectRow connectRowPending' : 'connectRow'}
+            onClick={() => onSelect(row.connector)}
+            disabled={disabled}
+            type="button"
+          >
+            <div className="connectLeft">
+              <WalletMark name={row.name} icon={row.icon} />
+              <div className="connectName">{row.name}</div>
+            </div>
+            <div className="muted small">
+              {pending ? <span className="connectPending">Waiting…</span> : 'Select'}
+            </div>
+          </button>
+        )
+      })}
 
       {installs.length > 0 ? (
         <>
