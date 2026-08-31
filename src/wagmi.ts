@@ -35,7 +35,10 @@ const wagmiAdapter = new WagmiAdapter({
 // working unchanged -- AppKit only takes over choosing and connecting a wallet.
 export const wagmiConfig = wagmiAdapter.wagmiConfig
 
-createAppKit({
+// Exported as a value rather than reached through useAppKit()/useAppKitTheme():
+// those hooks build new function identities on every render and subscribe to
+// theme state, so driving them from an effect re-enters itself forever.
+export const appKit = createAppKit({
   adapters: [wagmiAdapter],
   networks: [...networks],
   projectId,

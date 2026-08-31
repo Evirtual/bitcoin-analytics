@@ -1,6 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useAccount, useDisconnect } from 'wagmi'
-import { useAppKit, useAppKitTheme } from '@reown/appkit/react'
 import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
 import { useAssetBalances, useUserAssetTotals } from './hooks/useAssetBalances'
 import { useCandles, useCandlesMany, useChange24h, useSpotUsd, useSpotUsdMany } from './hooks/useMarket'
@@ -15,6 +14,7 @@ import { AccountModal } from './components/wallet/AccountModal'
 import { SwapModal } from './components/swap/SwapModal'
 import { SupportDeveloperModal } from './components/SupportDeveloperModal'
 import { useTheme } from './hooks/useTheme'
+import { appKit } from './wagmi'
 import { compact, usd } from './lib/format'
 import './App.css'
 
@@ -105,9 +105,6 @@ function App() {
   const { disconnect } = useDisconnect()
   // AppKit owns the wallet picker now: which wallets show, whether they are
   // installed, deep linking into the app, and the per-wallet connect states.
-  const { open: openAppKit } = useAppKit()
-  const { setThemeMode: setAppKitTheme, setThemeVariables: setAppKitThemeVariables } =
-    useAppKitTheme()
   const [dashboardView, setDashboardView] = useState<'market' | 'portfolio'>('market')
   const [marketCardOrder, setMarketCardOrder] = useState<MarketCardId[]>(readMarketCardOrder)
   const [draggedMarketCard, setDraggedMarketCard] = useState<MarketCardId | null>(null)
@@ -135,8 +132,8 @@ function App() {
   // Connection failures are reported inside AppKit's own modal, next to the
   // wallet that failed, so there is nothing left for a page-level toast to say.
   const showConnect = useCallback(() => {
-    void openAppKit()
-  }, [openAppKit])
+    void appKit.open()
+  }, [])
 
   const chainIds = useMemo<ChainId[]>(() => [1, 8453, 56], [])
 
@@ -155,9 +152,9 @@ function App() {
   // the dashboard's light/dark setting and the selected asset's accent is to
   // push both across whenever they change.
   useEffect(() => {
-    setAppKitTheme(theme)
-    setAppKitThemeVariables({ '--w3m-accent': accent })
-  }, [accent, setAppKitTheme, setAppKitThemeVariables, theme])
+    appKit.setThemeMode(theme)
+    appKit.setThemeVariables({ '--w3m-accent': accent })
+  }, [accent, theme])
 
   const spotUsd = useSpotUsd(assetKey)
   const change24h = useChange24h(assetKey)
