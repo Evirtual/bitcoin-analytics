@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+
+# Env
+# .env.local was already covered by *.local above; a plain .env was not.
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
