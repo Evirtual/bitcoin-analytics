@@ -304,24 +304,48 @@ export function useCandlesMany(assetKeys: AssetKey[], days: 1 | 7 | 30) {
   }
 }
 
+async function fetchChange24h(assetKey: AssetKey): Promise<number> {
+  const points = await fetchCandlesWithFallback(assetKey, 2)
+  // Approximate: last close vs close ~24h ago.
+  if (points.length < 2) throw new Error('Not enough candle data')
+  const last = points[points.length - 1]?.price
+  const prev = points[Math.max(0, points.length - 25)]?.price
+  if (!Number.isFinite(last) || !Number.isFinite(prev) || prev === 0) {
+    throw new Error('Change unavailable')
+  }
+  return ((last! - prev!) / prev!) * 100
+}
+
 export function useChange24h(assetKey: AssetKey) {
   return useQuery({
     queryKey: ['market', 'change', assetKey, '24h'],
-    queryFn: async () => {
-      const points = await (async () => {
-        return await fetchCandlesWithFallback(assetKey, 2)
-      })()
-      // Approximate: last close vs close ~24h ago.
-      if (points.length < 2) throw new Error('Not enough candle data')
-      const last = points[points.length - 1]?.price
-      const prev = points[Math.max(0, points.length - 25)]?.price
-      if (!Number.isFinite(last) || !Number.isFinite(prev) || prev === 0) {
-        throw new Error('Change unavailable')
-      }
-      return ((last - prev) / prev) * 100
-    },
+    queryFn: () => fetchChange24h(assetKey),
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
     retry: 1,
   })
+}
+
+export function useChange24hMany(assetKeys: AssetKey[]) {
+  const queries = useQueries({
+    queries: assetKeys.map((assetKey) => ({
+      queryKey: ['market', 'change', assetKey, '24h'],
+      queryFn: () => fetchChange24h(assetKey),
+      staleTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    })),
+  })
+
+  const map = new Map<AssetKey, number>()
+  for (let i = 0; i < assetKeys.length; i++) {
+    const key = assetKeys[i]
+    const q = queries[i]
+    if (key && q?.data !== undefined) map.set(key, q.data)
+  }
+
+  return {
+    isLoading: queries.some((q) => q.isLoading),
+    data: map,
+  }
 }

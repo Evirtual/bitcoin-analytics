@@ -50,7 +50,26 @@ const erc20Abi = [
   },
 ] as const
 
-export type AssetTotal = { assetKey: AssetKey; totalAmount: number; errorCount: number }
+export type AssetChainRow = {
+  chainId: ChainId
+  chainName: string
+  supported: boolean
+  tokenSymbol: string
+  amount: number
+  formatted: string
+  error: string | undefined
+  status: string
+}
+
+// The per-chain reads have already happened to produce the total, so they are
+// carried with it. Dropping them here only meant fetching them a second time
+// as soon as anything wanted to show where a balance actually sits.
+export type AssetTotal = {
+  assetKey: AssetKey
+  totalAmount: number
+  errorCount: number
+  byChain: AssetChainRow[]
+}
 
 function successfulAmount(balance: bigint, decimals: number) {
   const amount = Number(formatUnits(balance, decimals))
@@ -177,9 +196,14 @@ export async function fetchAssetBalances(address: Address, assetKey: AssetKey, c
 async function fetchAssetTotal(address: Address, assetKey: AssetKey, chainIds: ChainId[]): Promise<AssetTotal> {
   try {
     const res = await fetchAssetBalances(address, assetKey, chainIds)
-    return { assetKey, totalAmount: res.totalAmount, errorCount: res.errorCount }
+    return {
+      assetKey,
+      totalAmount: res.totalAmount,
+      errorCount: res.errorCount,
+      byChain: res.byChain,
+    }
   } catch {
-    return { assetKey, totalAmount: 0, errorCount: chainIds.length }
+    return { assetKey, totalAmount: 0, errorCount: chainIds.length, byChain: [] }
   }
 }
 
@@ -205,7 +229,7 @@ export function useUserNonZeroAssets(address: Address | undefined, chainIds: Cha
       queryKey: ['balances', 'probe', assetKey, address, chainIds],
       enabled: Boolean(address) && chainIds.length > 0,
       queryFn: async () => {
-        if (!address) return { assetKey, totalAmount: 0, errorCount: 0 }
+        if (!address) return { assetKey, totalAmount: 0, errorCount: 0, byChain: [] }
         return fetchAssetTotal(address, assetKey, chainIds)
       },
       staleTime: 30_000,
