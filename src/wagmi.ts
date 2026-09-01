@@ -35,10 +35,17 @@ export const wagmiConfig = createConfig({
       ? [
           walletConnect({
             projectId: walletConnectProjectId,
-            // The provider imports AppKit only to draw its own QR modal,
-            // and that import is gated on exactly this flag. Off, and the
-            // whole of AppKit stays out of the bundle; the connector still
-            // emits the pairing URI, which WalletConnectQrModal renders.
+            // The provider imports AppKit only to draw its own QR modal, and
+            // that import is gated on this flag at runtime. Off, AppKit is
+            // never loaded: the connector still emits the pairing URI, which
+            // WalletConnectQrModal renders.
+            //
+            // It does not keep AppKit out of the build, though. The import
+            // inside the provider is unconditional in source, so the bundler
+            // still emits the chunks -- roughly 7MB of w3m-* and wui-* files
+            // that double the built output and are never fetched. Nothing to
+            // fix here; worth knowing before someone reads a deploy size and
+            // goes looking for the cause.
             showQrModal: false,
             // Shown by the paired wallet while it asks the user to approve.
             metadata: {
