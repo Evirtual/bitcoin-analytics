@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
+import type { Connector } from 'wagmi'
 import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
 import { useAssetBalances, useUserAssetTotals } from './hooks/useAssetBalances'
 import {
@@ -19,11 +20,7 @@ import { MarketMoodCard } from './components/dashboard/MarketMoodCard'
 import { PortfolioHoldingsCard } from './components/dashboard/PortfolioHoldingsCard'
 import { PortfolioRiskCard } from './components/dashboard/PortfolioRiskCard'
 import { CostBasisCard } from './components/dashboard/CostBasisCard'
-import { AccountModal } from './components/wallet/AccountModal'
-import { ConnectWalletModal } from './components/wallet/ConnectWalletModal'
-import { SwapModal } from './components/swap/SwapModal'
 import { Toast } from './components/Toast'
-import { SupportDeveloperModal } from './components/SupportDeveloperModal'
 import { useTheme } from './hooks/useTheme'
 import { useCostBasis } from './hooks/useCostBasis'
 import { useScrollEdges } from './hooks/useScrollEdges'
@@ -52,6 +49,26 @@ const PriceBandsChartCard = lazy(() =>
 )
 const ReturnsHeatmapCard = lazy(() =>
   import('./components/charts/ReturnsHeatmapCard').then((m) => ({ default: m.ReturnsHeatmapCard })),
+)
+// None of these is reachable on first paint, and one of them carries the QR
+// library. Each is mounted only while it is open, so its chunk is fetched when
+// the window is actually asked for rather than on load.
+const AccountModal = lazy(() =>
+  import('./components/wallet/AccountModal').then((m) => ({ default: m.AccountModal })),
+)
+const ConnectWalletModal = lazy(() =>
+  // lazy() erases the component generic, which would leave the connector
+  // handed back to onSelectConnector typed as the bare constraint. Pinned
+  // here to the connector type wagmi actually gives us.
+  import('./components/wallet/ConnectWalletModal').then((m) => ({
+    default: m.ConnectWalletModal<Connector>,
+  })),
+)
+const SwapModal = lazy(() =>
+  import('./components/swap/SwapModal').then((m) => ({ default: m.SwapModal })),
+)
+const SupportDeveloperModal = lazy(() =>
+  import('./components/SupportDeveloperModal').then((m) => ({ default: m.SupportDeveloperModal })),
 )
 const PortfolioHistoryChartCard = lazy(() =>
   import('./components/charts/PortfolioHistoryChartCard').then((m) => ({
@@ -947,70 +964,86 @@ function App() {
         </>
       )}
 
-      <SupportDeveloperModal
-        open={supportOpen}
-        onClose={() => setSupportOpen(false)}
-        chainId={chain?.id}
-        assetKey={assetKey}
-      />
+      {supportOpen ? (
+        <Suspense fallback={null}>
+          <SupportDeveloperModal
+            open
+            onClose={() => setSupportOpen(false)}
+            chainId={chain?.id}
+            assetKey={assetKey}
+          />
+        </Suspense>
+      ) : null}
 
-      <ConnectWalletModal
-        open={connectOpen}
-        onClose={() => {
-          cancelConnect()
-          setConnectOpen(false)
-        }}
-        connectors={connectors}
-        pending={
-          pendingConnector
-            ? {
-                uid: pendingConnector.uid,
-                id: pendingConnector.id,
-                name: pendingConnector.name,
-                icon: pendingConnector.icon,
-              }
-            : undefined
-        }
-        walletConnectUri={walletConnectUri}
-        errorText={connectErrorText}
-        onSelectConnector={(c) => void runConnect(c)}
-        onRetry={() => {
-          const last = connectors.find((c) => c.uid === lastAttemptedUid.current)
-          if (last) void runConnect(last)
-        }}
-        onBack={cancelConnect}
-      />
+      {connectOpen ? (
+        <Suspense fallback={null}>
+          <ConnectWalletModal
+            open
+            onClose={() => {
+              cancelConnect()
+              setConnectOpen(false)
+            }}
+            connectors={connectors}
+            pending={
+              pendingConnector
+                ? {
+                    uid: pendingConnector.uid,
+                    id: pendingConnector.id,
+                    name: pendingConnector.name,
+                    icon: pendingConnector.icon,
+                  }
+                : undefined
+            }
+            walletConnectUri={walletConnectUri}
+            errorText={connectErrorText}
+            onSelectConnector={(c) => void runConnect(c)}
+            onRetry={() => {
+              const last = connectors.find((c) => c.uid === lastAttemptedUid.current)
+              if (last) void runConnect(last)
+            }}
+            onBack={cancelConnect}
+          />
+        </Suspense>
+      ) : null}
 
 
-      <SwapModal
-        open={swapOpen}
-        onClose={() => setSwapOpen(false)}
-        assetKey={assetKey}
-        chain={chain}
-        isConnected={isConnected}
-      />
+      {swapOpen ? (
+        <Suspense fallback={null}>
+          <SwapModal
+            open
+            onClose={() => setSwapOpen(false)}
+            assetKey={assetKey}
+            chain={chain}
+            isConnected={isConnected}
+          />
+        </Suspense>
+      ) : null}
 
-      <AccountModal
-        open={accountOpen}
-        onClose={() => setAccountOpen(false)}
-        isConnected={isConnected}
-        address={address}
-        onOpenConnect={() => {
-          setAccountOpen(false)
-          setConnectOpen(true)
-        }}
-        gas={{ isLoading: gas.isLoading, isRefetching: gas.isRefetching, data: gas.data, refetch: gas.refetch }}
-        onDisconnect={() => disconnect()}
-        assetTotals={{
-          isLoading: assetTotals.isLoading,
-          isRefetching: assetTotals.isRefetching,
-          data: assetTotals.data,
-          refetch: assetTotals.refetch,
-        }}
-        spotMany={spotMany}
-        chainIds={chainIds}
-        portfolioTotalUsd={portfolioByAsset.totalUsd}
-      />
+      {accountOpen ? (
+        <Suspense fallback={null}>
+          <AccountModal
+            open
+            onClose={() => setAccountOpen(false)}
+            isConnected={isConnected}
+            address={address}
+            onOpenConnect={() => {
+              setAccountOpen(false)
+              setConnectOpen(true)
+            }}
+            gas={{ isLoading: gas.isLoading, isRefetching: gas.isRefetching, data: gas.data, refetch: gas.refetch }}
+            onDisconnect={() => disconnect()}
+            assetTotals={{
+              isLoading: assetTotals.isLoading,
+              isRefetching: assetTotals.isRefetching,
+              data: assetTotals.data,
+              refetch: assetTotals.refetch,
+            }}
+            spotMany={spotMany}
+            chainIds={chainIds}
+            portfolioTotalUsd={portfolioByAsset.totalUsd}
+          />
+        </Suspense>
+      ) : null}
     </div>
   )
 }
