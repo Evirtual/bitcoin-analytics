@@ -16,7 +16,11 @@ function WalletMark({
   icon?: string | undefined
   directoryIcons?: Record<string, string> | undefined
 }) {
-  const src = connectorMark(name, icon) ?? directoryIcons?.[normalizeConnectorName(name)]
+  // What the wallet announces wins, then the artwork it publishes to the
+  // WalletConnect registry, and only then the mark vendored here -- a local
+  // copy should never override a wallet's own current logo.
+  const src =
+    icon ?? directoryIcons?.[normalizeConnectorName(name)] ?? connectorMark(name)
   return (
     // Each mark carries its own shape and backdrop, so a frame around them all
     // only fights whatever the wallet drew.

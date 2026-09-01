@@ -1,4 +1,5 @@
 import metaMaskIcon from '../assets/metamask.svg'
+import rabbyIcon from '../assets/rabby.svg'
 import walletConnectIcon from '../assets/walletconnect.svg'
 
 export function connectorInitials(name: string): string {
@@ -76,12 +77,14 @@ export const CURATED_WALLETS: readonly CuratedWallet[] = [
   { key: 'rabby', name: 'Rabby', installUrl: 'https://rabby.io/' },
 ]
 
-// A wallet announced over EIP-6963 carries its own icon. The MetaMask SDK
-// and WalletConnect connectors carry none, so supply the marks their own
-// packages ship rather than falling back to letters for the two that are
-// always on the list.
+// A wallet announced over EIP-6963 carries its own icon, but a wallet that is
+// not installed announces nothing -- and the curated install rows are exactly
+// the wallets someone does not have yet. Vendored marks keep those rows from
+// falling back to initials. Each is the wallet's own published artwork
+// (Rabby's from github.com/RabbyHub/logo).
 const CONNECTOR_ICONS: Record<string, string> = {
   metamask: metaMaskIcon,
+  rabby: rabbyIcon,
   walletconnect: walletConnectIcon,
 }
 
