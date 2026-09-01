@@ -93,7 +93,7 @@ export function SwapModal({
             visibleTargets.map((t) => (
               <button
                 key={t.id}
-                className="btn btnPrimary"
+                className="btn"
                 type="button"
                 title={`Open ${t.label}`}
                 onClick={() => {

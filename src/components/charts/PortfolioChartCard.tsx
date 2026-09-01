@@ -4,6 +4,12 @@ import { usd } from '../../lib/format'
 import { ChartFrame } from './ChartFrame'
 import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 
+// The donut is sized from min(width, height), so with the legend moved
+// alongside it this box is what sets both the ring's size and the card's
+// height. Shorter than the market charts on purpose: there is no time axis
+// here to give away, only a ring that reads fine smaller.
+const ALLOCATION_CHART_HEIGHT = '14.5em'
+
 export type PortfolioItem = {
   assetKey: AssetKey
   amount: number
@@ -36,12 +42,12 @@ export function PortfolioChartCard({
       </div>
 
       {isLoading ? (
-        <div className="chartWrap" style={{ height: '17.25em' }}>
+        <div className="chartWrap" style={{ height: ALLOCATION_CHART_HEIGHT }}>
           <div className="empty">Loading...</div>
         </div>
       ) : data.length ? (
         <div className="allocationLayout">
-          <ChartFrame style={{ height: '17.25em' }} fallback={<div className="empty">Loading...</div>}>
+          <ChartFrame style={{ height: ALLOCATION_CHART_HEIGHT }} fallback={<div className="empty">Loading...</div>}>
             {({ width, height }) => (
               <PieChart width={width} height={height}>
                 <Pie
@@ -89,7 +95,7 @@ export function PortfolioChartCard({
           </div>
         </div>
       ) : (
-        <div className="chartWrap" style={{ height: '17.25em' }}>
+        <div className="chartWrap" style={{ height: ALLOCATION_CHART_HEIGHT }}>
           <div className="empty">Connect a wallet with supported assets to see allocation.</div>
         </div>
       )}

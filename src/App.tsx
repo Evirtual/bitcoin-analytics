@@ -2,20 +2,38 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { ASSETS, type AssetKey, type ChainId } from './assets/catalog'
 import { useAssetBalances, useUserAssetTotals } from './hooks/useAssetBalances'
-import { useCandles, useCandlesMany, useChange24h, useSpotUsd, useSpotUsdMany } from './hooks/useMarket'
+import {
+  useCandles,
+  useCandlesMany,
+  useChange24h,
+  useChange24hMany,
+  useSpotUsd,
+  useSpotUsdMany,
+} from './hooks/useMarket'
 import { useGasBalances } from './hooks/useGasBalances'
 import { AssetIcon } from './components/AssetIcon'
 import type { CandleRange } from './components/charts/types'
 import { rangeToDays } from './components/charts/rangeUtils'
 import { Header } from './components/dashboard/Header'
 import { MarketMoodCard } from './components/dashboard/MarketMoodCard'
-import { MarketDashboardMeta } from './components/dashboard/MarketDashboardMeta'
+import { PortfolioHoldingsCard } from './components/dashboard/PortfolioHoldingsCard'
+import { PortfolioRiskCard } from './components/dashboard/PortfolioRiskCard'
+import { CostBasisCard } from './components/dashboard/CostBasisCard'
 import { AccountModal } from './components/wallet/AccountModal'
 import { ConnectWalletModal } from './components/wallet/ConnectWalletModal'
 import { SwapModal } from './components/swap/SwapModal'
 import { Toast } from './components/Toast'
 import { SupportDeveloperModal } from './components/SupportDeveloperModal'
 import { useTheme } from './hooks/useTheme'
+import { useCostBasis } from './hooks/useCostBasis'
+import { useScrollEdges } from './hooks/useScrollEdges'
+import {
+  buildPortfolioValueSeries,
+  computeConcentration,
+  computeCostBasisSummary,
+  computePortfolio24h,
+  computePortfolioStats,
+} from './lib/portfolio'
 import { compact, usd } from './lib/format'
 import { formatConnectErrorMessage } from './lib/wallet'
 import './App.css'
@@ -34,6 +52,11 @@ const PriceBandsChartCard = lazy(() =>
 )
 const ReturnsHeatmapCard = lazy(() =>
   import('./components/charts/ReturnsHeatmapCard').then((m) => ({ default: m.ReturnsHeatmapCard })),
+)
+const PortfolioHistoryChartCard = lazy(() =>
+  import('./components/charts/PortfolioHistoryChartCard').then((m) => ({
+    default: m.PortfolioHistoryChartCard,
+  })),
 )
 const AssetComparisonChartCard = lazy(() =>
   import('./components/charts/AssetComparisonChartCard').then((m) => ({ default: m.AssetComparisonChartCard })),
@@ -288,6 +311,8 @@ function App() {
         amount: t.totalAmount,
         usd: usdValue,
         usdLabel: usd.format(usdValue),
+        price,
+        byChain: t.byChain ?? [],
       }
     })
     const totalUsd = items.reduce((acc, i) => acc + (Number.isFinite(i.usd) ? i.usd : 0), 0)
@@ -297,6 +322,60 @@ function App() {
   const portfolioAssetCount = useMemo(() => {
     return portfolioByAsset.items.filter((item) => item.amount > 0).length
   }, [portfolioByAsset.items])
+
+  const heldPositions = useMemo(() => {
+    return portfolioByAsset.items
+      .filter((item) => item.amount > 0)
+      .sort((a, b) => b.usd - a.usd)
+  }, [portfolioByAsset.items])
+
+  const [portfolioRange, setPortfolioRange] = useState<CandleRange>('1W')
+  const portfolioDays = useMemo(() => rangeToDays(portfolioRange) as 1 | 7 | 30, [portfolioRange])
+
+  // Held assets only, and only once the portfolio view is actually open: this
+  // is up to six extra candle requests, and none of them are worth making
+  // while the market view is the one on screen.
+  const portfolioAssetKeys = useMemo<AssetKey[]>(() => {
+    if (activeDashboardView !== 'portfolio') return []
+    return heldPositions.map((item) => item.assetKey)
+  }, [activeDashboardView, heldPositions])
+
+  const portfolioCandles = useCandlesMany(portfolioAssetKeys, portfolioDays)
+  const portfolioChanges = useChange24hMany(portfolioAssetKeys)
+
+  const portfolioValueSeries = useMemo(() => {
+    return buildPortfolioValueSeries(heldPositions, portfolioCandles.data)
+  }, [heldPositions, portfolioCandles.data])
+
+  const portfolioStats = useMemo(() => computePortfolioStats(portfolioValueSeries), [portfolioValueSeries])
+
+  const portfolioConcentration = useMemo(() => computeConcentration(heldPositions), [heldPositions])
+
+  const portfolioChange24h = useMemo(() => {
+    return computePortfolio24h(heldPositions, portfolioChanges.data)
+  }, [heldPositions, portfolioChanges.data])
+
+  const holdingRows = useMemo(() => {
+    const total = portfolioByAsset.totalUsd
+    return heldPositions.map((item) => ({
+      assetKey: item.assetKey,
+      amount: item.amount,
+      price: item.price,
+      usd: item.usd,
+      change24h: portfolioChanges.data.get(item.assetKey),
+      weight: total > 0 ? (item.usd / total) * 100 : 0,
+      byChain: item.byChain,
+    }))
+  }, [heldPositions, portfolioByAsset.totalUsd, portfolioChanges.data])
+
+  const { basis: costBasis, setAssetCost, clearAll: clearCostBasis } = useCostBasis()
+
+  const assetStripRef = useRef<HTMLDivElement>(null)
+  const assetStripEdges = useScrollEdges(assetStripRef)
+
+  const costBasisSummary = useMemo(() => {
+    return computeCostBasisSummary(heldPositions, costBasis)
+  }, [costBasis, heldPositions])
 
   const balanceIssueCount = useMemo(() => {
     return (assetTotals.data ?? []).reduce((acc, item) => acc + (item.errorCount ?? 0), 0)
@@ -524,7 +603,19 @@ function App() {
       />
 
       <div className="toolbar">
-        <div className="segmented" role="tablist" aria-label="Asset selector">
+        <div
+          ref={assetStripRef}
+          className={[
+            'segmented',
+            'assetSwitch',
+            assetStripEdges.start ? 'segmentedFadeStart' : '',
+            assetStripEdges.end ? 'segmentedFadeEnd' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          role="tablist"
+          aria-label="Asset selector"
+        >
           {assetOptions.map((k) => (
             <button
               key={k}
@@ -538,11 +629,8 @@ function App() {
             </button>
           ))}
         </div>
-        <MarketDashboardMeta isRefreshing={assetTotals.isLoading} />
-      </div>
 
-      {isConnected ? (
-        <div className="viewBar">
+        {isConnected ? (
           <div className="segmented viewSwitch" role="tablist" aria-label="Dashboard view">
             <button
               className={activeDashboardView === 'market' ? 'segBtn segBtnActive' : 'segBtn'}
@@ -561,11 +649,8 @@ function App() {
               Portfolio
             </button>
           </div>
-          <div className="viewHint muted small">
-            {activeDashboardView === 'market' ? 'Global market analytics' : 'Connected wallet analytics'}
-          </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       {activeDashboardView === 'market' ? (
         <>
@@ -728,10 +813,27 @@ function App() {
             <div className="kpiCard portfolioHero">
               <div className="kpiLabel">Portfolio Total</div>
               <div className="kpiValue">{usd.format(portfolioByAsset.totalUsd)}</div>
+              <div className="kpiSub">
+                {portfolioChange24h ? (
+                  <span className={portfolioChange24h.deltaUsd >= 0 ? 'pos' : 'neg'}>
+                    {portfolioChange24h.deltaUsd >= 0 ? '+' : '-'}
+                    {usd.format(Math.abs(portfolioChange24h.deltaUsd))} (
+                    {portfolioChange24h.pct >= 0 ? '+' : ''}
+                    {portfolioChange24h.pct.toFixed(2)}%) 24h
+                  </span>
+                ) : (
+                  <span className="muted">
+                    {portfolioChanges.isLoading ? 'Loading 24h change...' : '24h change unavailable'}
+                  </span>
+                )}
+              </div>
               <div className="kpiSub muted">
                 {portfolioAssetCount
                   ? `${portfolioAssetCount} supported asset${portfolioAssetCount === 1 ? '' : 's'} detected`
                   : 'No supported assets detected yet'}
+                {portfolioChange24h?.uncoveredCount
+                  ? ` · ${portfolioChange24h.uncoveredCount} without a 24h quote`
+                  : ''}
               </div>
             </div>
 
@@ -755,6 +857,28 @@ function App() {
               <div className="kpiSub muted">{gasSummary}</div>
             </div>
           </div>
+
+          <Suspense fallback={<ChartFallback />}>
+            <section className="grid1">
+              <PortfolioHistoryChartCard
+                points={portfolioValueSeries}
+                stats={portfolioStats}
+                range={portfolioRange}
+                onRangeChange={setPortfolioRange}
+                isLoading={portfolioCandles.isLoading || assetTotals.isLoading}
+              />
+            </section>
+          </Suspense>
+
+          <section className="grid1">
+            <PortfolioHoldingsCard
+              rows={holdingRows}
+              totalUsd={portfolioByAsset.totalUsd}
+              isLoading={assetTotals.isLoading || spotMany.isLoading}
+              selectedAssetKey={assetKey}
+              onSelectAsset={setAssetKey}
+            />
+          </section>
 
           <Suspense fallback={<ChartFallback />}>
             <section className="grid2">
@@ -806,10 +930,29 @@ function App() {
               </div>
             </section>
           </Suspense>
+
+          <section className="grid2">
+            <PortfolioRiskCard
+              stats={portfolioStats}
+              concentration={portfolioConcentration}
+              range={portfolioRange}
+              isLoading={portfolioCandles.isLoading || assetTotals.isLoading}
+            />
+            <CostBasisCard
+              summary={costBasisSummary}
+              onSetCost={setAssetCost}
+              onClearAll={clearCostBasis}
+            />
+          </section>
         </>
       )}
 
-      <SupportDeveloperModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+      <SupportDeveloperModal
+        open={supportOpen}
+        onClose={() => setSupportOpen(false)}
+        chainId={chain?.id}
+        assetKey={assetKey}
+      />
 
       <ConnectWalletModal
         open={connectOpen}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Info, X } from 'lucide-react'
 import { useOutsideClick } from '../../hooks/useOutsideClick'
 
-export function MarketDashboardMeta({ isRefreshing }: { isRefreshing: boolean }) {
+export function MarketDashboardMeta() {
   const [infoPinned, setInfoPinned] = useState(false)
   const [infoHover, setInfoHover] = useState(false)
   const [infoFocus, setInfoFocus] = useState(false)
@@ -48,9 +48,8 @@ export function MarketDashboardMeta({ isRefreshing }: { isRefreshing: boolean })
   }, [infoOpen, isMobile])
 
   return (
-    <div className="dashboardMeta muted small">
+    <div className="dashboardMeta muted">
       {isMobile && infoOpen ? <div className="infoBackdrop" onClick={closeInfo} aria-hidden="true" /> : null}
-      <span>{isRefreshing ? 'Refreshing…' : 'Market dashboard'}</span>
       <span
         ref={wrapRef}
         className="infoWrap"

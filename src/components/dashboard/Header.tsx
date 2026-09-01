@@ -3,6 +3,7 @@ import type { Chain } from 'viem'
 import type { AssetKey } from '../../assets/catalog'
 import { ASSETS } from '../../assets/catalog'
 import { AssetIcon } from '../AssetIcon'
+import { MarketDashboardMeta } from './MarketDashboardMeta'
 
 function chainIcon(chain: Chain | undefined): AssetKey | undefined {
   const id = chain?.id
@@ -45,7 +46,11 @@ export function Header({
           <AssetIcon assetKey={assetKey} size={46} className="logoMark" />
           <div>
             <div className="title">
-              <span className="titleAccent">{ASSETS[assetKey].label}</span> Analytics
+              <span className="titleAccent">{ASSETS[assetKey].label}</span>{' '}
+              <span className="titleTail">
+                Analytics
+                <MarketDashboardMeta />
+              </span>
             </div>
             <div className="subtitle">Market stats + multichain wallet balances</div>
           </div>
@@ -54,11 +59,17 @@ export function Header({
 
       <div className="walletBar">
         {isConnected ? (
-          <button className="pill pillBtn pillPrimary headerSwapBtn" type="button" onClick={onOpenSwap}>
+          <button
+            className="pill pillBtn headerSwapBtn"
+            type="button"
+            onClick={onOpenSwap}
+            aria-label="Swap"
+            title="Swap"
+          >
             <span className="pillIcon pillIconSwap" aria-hidden="true">
               <ArrowLeftRight size={15} strokeWidth={2} />
             </span>
-            Swap
+            <span className="pillLabel">Swap</span>
           </button>
         ) : null}
 
@@ -67,32 +78,14 @@ export function Header({
           type="button"
           onClick={onOpenSupport}
           aria-label="Support the developer"
+          title="Support the developer"
         >
           <span className="pillIcon pillIconHeart" aria-hidden="true">
             <Heart size={15} strokeWidth={2} />
           </span>
-          Support
+          <span className="pillLabel">Support</span>
         </button>
 
-        <button
-          className="pill pillBtn headerThemeBtn"
-          type="button"
-          onClick={onToggleTheme}
-          aria-label="Toggle theme"
-          aria-pressed={theme === 'light'}
-          title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-        >
-          {theme === 'dark' ? (
-            <span className="pillIcon pillIconSun" aria-hidden="true">
-              <Sun size={15} strokeWidth={2} />
-            </span>
-          ) : (
-            <span className="pillIcon pillIconMoon" aria-hidden="true">
-              <Moon size={15} strokeWidth={2} />
-            </span>
-          )}
-          {theme === 'dark' ? 'Light' : 'Dark'}
-        </button>
         {!isConnected ? (
           <button className="btn btnPrimary headerConnectBtn" onClick={onOpenConnect} disabled={connectDisabled}>
             {connectDisabled ? 'Connecting…' : 'Connect'}
@@ -131,12 +124,35 @@ export function Header({
                   />
                 </svg>
               </span>
-              {addrIcon ? <AssetIcon assetKey={addrIcon} size={16} /> : null}
+              {addrIcon ? (
+                <span className="walletChainIcon">
+                  <AssetIcon assetKey={addrIcon} size={16} />
+                </span>
+              ) : null}
               {address?.slice(0, 6)}…{address?.slice(-4)}
-              {chain?.name ? ` • ${chain.name}` : ''}
+              {chain?.name ? <span className="walletChain"> • {chain.name}</span> : null}
             </button>
           </>
         )}
+
+        <button
+          className="pill pillBtn headerThemeBtn"
+          type="button"
+          onClick={onToggleTheme}
+          aria-label="Toggle theme"
+          aria-pressed={theme === 'light'}
+          title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+        >
+          {theme === 'dark' ? (
+            <span className="pillIcon pillIconSun" aria-hidden="true">
+              <Sun size={15} strokeWidth={2} />
+            </span>
+          ) : (
+            <span className="pillIcon pillIconMoon" aria-hidden="true">
+              <Moon size={15} strokeWidth={2} />
+            </span>
+          )}
+        </button>
       </div>
     </header>
   )

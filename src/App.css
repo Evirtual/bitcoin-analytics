@@ -25,6 +25,17 @@
   gap: 0.75rem;
 }
 
+/* The title gets first call on the header's width; the pills wrap sooner so
+   the name stays on one line and takes the info control up there with it. */
+.brand {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.titleTail {
+  white-space: nowrap;
+}
+
 .logoMark {
   flex: 0 0 auto;
   color: var(--textStrong);
@@ -52,7 +63,11 @@
   align-items: center;
   justify-content: flex-end;
   gap: 0.625rem;
-  flex-wrap: wrap;
+  /* One row from the smallest phone up. The wallet pill absorbs the slack and
+     the labels drop to icons before anything is allowed to wrap. */
+  flex-wrap: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .pillIcon {
@@ -76,6 +91,13 @@
   color: var(--accent);
 }
 
+/* No label to sit beside, so it squares up. The sun/moon already says which
+   way the switch goes, and the word doubled the button's width. */
+.headerThemeBtn {
+  gap: 0;
+  padding: 0.75rem;
+}
+
 .pillIconSwap {
   color: var(--textStrong);
 }
@@ -94,22 +116,14 @@
   margin-top: 0.875rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.viewBar {
-  margin-top: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
 }
 
 .viewSwitch {
   width: auto;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .viewSwitch .segBtn {
@@ -117,14 +131,31 @@
   justify-content: center;
 }
 
-.viewHint {
-  margin-left: auto;
+/* The strip that absorbs the leftover width, and the only one long enough to
+   need scrolling. */
+.assetSwitch {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
+/* Inline at the end of the title, so it must not take the title's size,
+   weight or baseline with it. */
+/* Aligned to the cap of the "A", not to the line box.
+   The line box starts above the capital -- half the leading plus the font's
+   ascent over its cap height -- which is 0.289em for this face at any size,
+   so the offset is expressed in em and rides the title's clamp. The 4px comes
+   off for the icon's own centring inside its 1.5rem hit area.
+   Note this element keeps the title's font-size so that em means what it says
+   here; the label and the panel set their own. */
 .dashboardMeta {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
+  vertical-align: top;
+  margin-left: 0.25rem;
+  margin-top: calc(0.289em - 4px);
+  font-weight: 400;
+  letter-spacing: 0;
 }
 
 .infoWrap {
@@ -156,9 +187,17 @@
 .infoTooltip {
   position: absolute;
   top: calc(100% + 0.5rem);
-  right: 0;
+  left: 0;
+  right: auto;
+  /* The control sits inside the title's nowrap group so its icon cannot be
+     orphaned from the word. The panel is prose, and must wrap. */
+  white-space: normal;
   width: min(20rem, calc(100vw - 2rem));
-  background: var(--tooltipBg);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.5;
+  background: var(--modalBg1);
+  backdrop-filter: blur(1rem);
   border: 0.0625rem solid var(--tooltipBorder);
   box-shadow: var(--tooltipShadow);
   color: var(--tooltipText);
@@ -193,6 +232,7 @@
   top: 50%;
   left: 50%;
   right: auto;
+  background: var(--modalBg1);
   transform: translate(-50%, -50%);
   width: min(20rem, calc(100vw - 2rem));
   max-height: calc(100vh - 4rem);
@@ -225,6 +265,11 @@
 
 .segmented {
   display: inline-flex;
+  /* A div, so it misses the control reset's border-box. Without it both the
+     max-width and the 100% flex-basis below measure the content box, and the
+     0.25rem padding plus the border landed outside the row everything else
+     lines up to. */
+  box-sizing: border-box;
   border: 0.0625rem solid var(--stroke);
   background: var(--card2);
   border-radius: 0.75rem;
@@ -239,6 +284,24 @@
 
 .segmented::-webkit-scrollbar {
   display: none;
+}
+
+.segmentedFadeStart {
+  mask-image: linear-gradient(to right, transparent 0, #000 1.75rem);
+}
+
+.segmentedFadeEnd {
+  mask-image: linear-gradient(to right, #000 calc(100% - 1.75rem), transparent 100%);
+}
+
+.segmentedFadeStart.segmentedFadeEnd {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 1.75rem,
+    #000 calc(100% - 1.75rem),
+    transparent 100%
+  );
 }
 
 .segBtn {
@@ -575,7 +638,8 @@
   }
 
   .walletAddressPill {
-    flex: 1 1 100%;
+    flex: 1 1 auto;
+    min-width: 0;
     justify-content: flex-start;
   }
 }
@@ -903,15 +967,11 @@
   margin-top: 1rem;
 }
 
-@media (max-width: 40rem) {
-  .marketTile {
-    --marketChartHeight: 16rem;
-  }
-
-  .page {
-    padding: 1.25rem 1rem 2.5rem;
-  }
-
+/* The dashboard's own boundary, a pixel below it so the two never both apply.
+   Above, the header is one line: brand left, controls right. Below, the brand
+   needs the full width to keep its title on one line, so the controls take a
+   row of their own underneath -- one row, never two. */
+@media (max-width: 56.1875rem) {
   .header {
     flex-direction: column;
     align-items: stretch;
@@ -919,11 +979,8 @@
 
   .walletBar {
     width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
     justify-content: flex-start;
-    gap: 0.5rem;
+    gap: 0.375rem;
   }
 
   .walletBar > button {
@@ -931,21 +988,93 @@
     justify-content: center;
   }
 
+  /* Content-sized rather than stretched to equal thirds; stretching them is
+     what pushed the wallet onto a second row and left both looking padded. */
   .headerSwapBtn,
   .headerSupportBtn,
   .headerThemeBtn {
-    flex: 1 1 0;
+    flex: 0 0 auto;
     justify-content: center;
   }
 
-  .headerSwapBtn,
+  /* Grows for the same reason the wallet pill does: disconnected there is no
+     pill to take the slack, and the row stopped short of the width. */
   .headerConnectBtn {
+    flex: 1 1 auto;
     padding: 0.625rem 0.75rem;
   }
 
+  /* Takes the slack so the row reaches the full width rather than packing
+     left and leaving the right half of the header empty. */
   .walletAddressPill {
-    flex: 1 1 100%;
+    flex: 1 1 auto;
+    min-width: 0;
     justify-content: flex-start;
+  }
+
+  /* The toolbar turns over on the same width as the header above it: assets
+     across their own full-width row, tabs across the next. Two boundaries for
+     one change of shape only made the header and the toolbar disagree. */
+  .toolbar .assetSwitch {
+    flex: 1 0 100%;
+  }
+
+  /* Two standalone buttons rather than one joined control -- at this width the
+     shared frame around a two-item switch reads as a third box. */
+  .toolbar .viewSwitch {
+    flex: 1 0 100%;
+    margin-left: 0;
+    gap: 0.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    overflow: visible;
+  }
+
+  .toolbar .viewSwitch .segBtn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.5625rem 0.625rem;
+    border-radius: 0.75rem;
+    border-color: var(--stroke);
+    background: var(--card2);
+  }
+
+  .toolbar .viewSwitch .segBtnActive {
+    border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+    background: var(--accentSoft);
+  }
+}
+
+/* Narrower than any current phone in portrait bar the very smallest: below
+   this the row cannot hold the two words as well as the wallet, so they keep
+   the icon and drop the label. Both carry an aria-label and a title, so
+   nothing is lost to a screen reader or to a hover.
+
+   Placed after the block above on purpose: it overrides that block's padding,
+   and at equal specificity the later rule is the one that wins. */
+@media (max-width: 24rem) {
+  .headerSwapBtn .pillLabel,
+  .headerSupportBtn .pillLabel {
+    display: none;
+  }
+
+  /* The theme switch's exact footprint, so the three read as one set rather
+     than two pinched buttons beside a round one. */
+  .headerSwapBtn,
+  .headerSupportBtn {
+    gap: 0;
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 40rem) {
+  .marketTile {
+    --marketChartHeight: 16rem;
+  }
+
+  .page {
+    padding: 1.25rem 1rem 2.5rem;
   }
 
   .toolbar {
@@ -991,6 +1120,15 @@
 }
 
 @media (max-width: 30rem) {
+  /* The chain goes first, name and icon together: both are one tap away in the
+     account panel, and keeping them here clipped the address itself. Dropping
+     the icon with the name is also what lets the Swap and Support labels keep
+     the same padding they have on desktop. */
+  .walletChain,
+  .walletChainIcon {
+    display: none;
+  }
+
   .marketTile {
     --marketChartHeight: 15.5rem;
   }
@@ -1503,9 +1641,313 @@
   border-color: rgba(239, 68, 68, 0.35);
 }
 
+
+/* ======================================================================
+   Portfolio: holdings, risk and cost basis
+   ====================================================================== */
+
+.portfolioHistoryMeta {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.625rem;
+}
+
+.portfolioHistoryMeta > div {
+  display: grid;
+  gap: 0.1875rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+  min-width: 0;
+}
+
+.portfolioHistoryMeta strong {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The columns carry more than a narrow screen can hold, so the table scrolls
+   inside the card rather than dropping figures or squeezing the page. */
+.holdingsTable {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.375rem;
+  overflow-x: auto;
+}
+
+.holdingsHeadRow,
+.holdingsRow {
+  min-width: 32rem;
+  display: grid;
+  grid-template-columns:
+    minmax(6.5rem, 1.5fr) minmax(4.5rem, 1fr) minmax(5rem, 1.1fr)
+    minmax(4rem, 0.8fr) minmax(3.5rem, 0.7fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.holdingsHeadRow {
+  padding: 0 0.75rem 0.125rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.holdingsGroup {
+  --rowAccent: var(--accent);
+
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+  border-radius: 0.75rem;
+}
+
+.holdingsGroupActive {
+  border-color: color-mix(in srgb, var(--rowAccent) 45%, transparent);
+}
+
+.holdingsRow {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  background: transparent;
+  border: 0;
+  border-radius: 0.75rem;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.holdingsRow:hover {
+  background: var(--card);
+}
+
+.holdingsRow:hover .assetRowChevron {
+  color: var(--textStrong);
+}
+
+.holdingsAsset {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.holdingsAssetText {
+  display: grid;
+  min-width: 0;
+}
+
+.holdingsAssetKey {
+  font-weight: 800;
+  font-size: 0.8125rem;
+}
+
+.holdingsAmount {
+  font-size: 0.6875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.holdingsNum {
+  justify-self: end;
+  text-align: right;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.holdingsValue {
+  font-weight: 700;
+}
+
+.holdingsChains {
+  display: grid;
+  gap: 0.375rem;
+  padding: 0 0.75rem 0.75rem;
+}
+
+.holdingsChainRow {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 1fr) auto minmax(6rem, 1.1fr) minmax(5rem, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.625rem;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card);
+  font-size: 0.75rem;
+}
+
+.holdingsChainName {
+  font-weight: 700;
+}
+
+.holdingsChainActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.holdingsChainBtn {
+  padding: 0.4375rem 0.625rem;
+  font-size: 0.75rem;
+}
+
+.holdingsEmpty {
+  margin-top: 0.75rem;
+  padding: 1.25rem 0.75rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  border-radius: 0.75rem;
+  border: 0.0625rem dashed color-mix(in srgb, var(--stroke) 75%, transparent);
+}
+
+.riskGrid {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.625rem;
+}
+
+.riskCell {
+  display: grid;
+  gap: 0.1875rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+  min-width: 0;
+}
+
+.riskCell strong {
+  font-size: 1.0625rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.basisTable {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.375rem;
+  overflow-x: auto;
+}
+
+.basisHeadRow,
+.basisRow {
+  min-width: 26rem;
+  display: grid;
+  grid-template-columns:
+    minmax(4.5rem, 0.9fr) minmax(6rem, 1.1fr)
+    minmax(5rem, 1fr) minmax(6.5rem, 1.2fr);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.basisHeadRow {
+  padding: 0 0.625rem 0.125rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.basisRow {
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.625rem;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+}
+
+.basisAsset {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.basisInputCell {
+  min-width: 0;
+}
+
+.basisInput {
+  width: 100%;
+  min-width: 0;
+  padding: 0.375rem 0.5rem;
+  text-align: right;
+  font-size: 0.75rem;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--card);
+  border: 0.0625rem solid var(--stroke);
+  border-radius: 0.5rem;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+/* The spinners sit on top of the figure at this width and are no use for a
+   price typed to six places. */
+.basisInput::-webkit-outer-spin-button,
+.basisInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.basisInput:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 0 0 0.125rem var(--accentSoft);
+}
+
+.basisPnlPct {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+
+.basisTotals {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.625rem;
+}
+
+.basisTotals > div {
+  display: grid;
+  gap: 0.1875rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 0.0625rem solid var(--stroke);
+  background: var(--card2);
+  min-width: 0;
+}
+
+.basisTotals strong {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (min-width: 56.25rem) {
   .kpiGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .riskGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* Stacked under the donut, the legend made this card roughly its own height
+     taller than it needed to be -- in a card that had empty room either side
+     of the donut the whole time. Beside it, both halves are used and the row
+     below starts higher. Narrower than this the legend goes back under, where
+     it has the width for its figures. */
+  .allocationLayout {
+    grid-template-columns: minmax(0, 1fr) minmax(12.5rem, 0.85fr);
+    align-items: center;
   }
 
   .portfolioSummary {

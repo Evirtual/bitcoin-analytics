@@ -76,6 +76,26 @@ const DONATION_TARGETS: DonationTarget[] = [
   },
 ]
 
+/**
+ * Which network to open on.
+ *
+ * Someone who opened this has already said what they want, so making them
+ * click again to reach an address is a step for nothing. The connected chain
+ * is the best guess available; failing that the asset on screen; failing both,
+ * the network this dashboard is named after.
+ */
+function defaultTargetKey(
+  chainId: number | undefined,
+  assetKey: AssetKey,
+): DonationTarget['key'] {
+  if (chainId === 1) return 'ethereum'
+  if (chainId === 8453) return 'base'
+  if (chainId === 56) return 'bnb'
+  if (assetKey === 'ETH') return 'ethereum'
+  if (assetKey === 'BNB') return 'bnb'
+  return 'bitcoin'
+}
+
 async function copyText(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text)
@@ -103,14 +123,21 @@ async function copyText(text: string): Promise<boolean> {
 export function SupportDeveloperModal({
   open,
   onClose,
+  chainId,
+  assetKey,
 }: {
   open: boolean
   onClose: () => void
+  chainId: number | undefined
+  assetKey: AssetKey
 }) {
   const [toastOpen, setToastOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string>('')
   const [toastVariant, setToastVariant] = useState<'default' | 'error'>('default')
-  const [expandedKey, setExpandedKey] = useState<DonationTarget['key'] | null>(null)
+  const [choice, setChoice] = useState<DonationTarget['key'] | 'none' | null>(null)
+
+  const defaultKey = defaultTargetKey(chainId, assetKey)
+  const expandedKey = choice === null ? defaultKey : choice === 'none' ? null : choice
 
   useEffect(() => {
     if (!toastOpen) return
@@ -118,11 +145,12 @@ export function SupportDeveloperModal({
     return () => window.clearTimeout(t)
   }, [toastOpen])
 
-  // Reopening should not drop the reader straight onto an address they happened
-  // to expand some other time. Every exit route — the close button, Escape and
-  // the backdrop — comes back through here.
+  // Reopening should not drop the reader onto an address they happened to
+  // expand some other time; clearing the choice hands the panel back to the
+  // context, which may itself have changed by the next open. Every exit route —
+  // the close button, Escape and the backdrop — comes back through here.
   const handleClose = useCallback(() => {
-    setExpandedKey(null)
+    setChoice(null)
     onClose()
   }, [onClose])
 
@@ -150,7 +178,7 @@ export function SupportDeveloperModal({
                     expanded ? 'supportItemHeader supportItemHeaderOpen' : 'supportItemHeader'
                   }
                   type="button"
-                  onClick={() => setExpandedKey((k) => (k === t.key ? null : t.key))}
+                  onClick={() => setChoice(expandedKey === t.key ? 'none' : t.key)}
                   aria-expanded={expanded}
                 >
                   <div className="supportItemHeaderLeft">
