@@ -758,27 +758,27 @@
   opacity: 0.95;
 }
 
-/* A fixed sentiment ramp. These deliberately do not use --accent: that variable
-   carries the selected asset, and the mood of the market has nothing to do with
-   which coin you happen to be looking at. */
-.moodArcFreeze {
-  stroke: color-mix(in srgb, var(--danger) 80%, transparent);
+/* The ramp keeps its own red-to-green reading, tinted a third of the way toward
+   the selected asset so the ring belongs to the rest of the card. Mixing in oklab
+   keeps the blend from going muddy the way srgb does across distant hues. */
+.moodStopFreeze {
+  stop-color: color-mix(in oklab, var(--danger) 70%, var(--accent) 30%);
 }
 
-.moodArcCautious {
-  stroke: color-mix(in srgb, #f97316 80%, transparent);
+.moodStopCautious {
+  stop-color: color-mix(in oklab, #f97316 70%, var(--accent) 30%);
 }
 
-.moodArcBalanced {
-  stroke: color-mix(in srgb, #eab308 80%, transparent);
+.moodStopBalanced {
+  stop-color: color-mix(in oklab, #eab308 70%, var(--accent) 30%);
 }
 
-.moodArcOptimistic {
-  stroke: color-mix(in srgb, #84cc16 78%, transparent);
+.moodStopOptimistic {
+  stop-color: color-mix(in oklab, #84cc16 70%, var(--accent) 30%);
 }
 
-.moodArcEuphoric {
-  stroke: color-mix(in srgb, var(--accent2) 75%, transparent);
+.moodStopEuphoric {
+  stop-color: color-mix(in oklab, var(--accent2) 70%, var(--accent) 30%);
 }
 
 .moodPointerOuter {

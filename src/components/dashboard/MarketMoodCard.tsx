@@ -21,22 +21,29 @@ function arcPath(cx: number, cy: number, r: number, startDeg: number, endDeg: nu
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} ${sweep} ${end.x} ${end.y}`
 }
 
-// The colour bands are the label thresholds, so the ring and the word always
-// agree about which zone the needle is in. Boundaries sit between the two
-// values they separate. A small gap keeps the rounded ends from overlapping.
-const MOOD_BANDS = [
-  { from: 0, to: 24.5, className: 'moodArcFreeze' },
-  { from: 24.5, to: 44.5, className: 'moodArcCautious' },
-  { from: 44.5, to: 55.5, className: 'moodArcBalanced' },
-  { from: 55.5, to: 74.5, className: 'moodArcOptimistic' },
-  { from: 74.5, to: 100, className: 'moodArcEuphoric' },
+// One smooth ramp rather than five flat segments. Each colour is anchored at the
+// middle of the zone it belongs to, so the needle sits over its own colour while
+// the transitions between zones stay soft.
+const MOOD_STOPS = [
+  { at: 0, className: 'moodStopFreeze' },
+  { at: 12, className: 'moodStopFreeze' },
+  { at: 34.5, className: 'moodStopCautious' },
+  { at: 50, className: 'moodStopBalanced' },
+  { at: 65, className: 'moodStopOptimistic' },
+  { at: 87.5, className: 'moodStopEuphoric' },
+  { at: 100, className: 'moodStopEuphoric' },
 ]
-
-const BAND_GAP_DEG = 1.5
 
 // 0 → left of the semicircle, 100 → right.
 function valueToAngle(value: number) {
   return 180 + (value / 100) * 180
+}
+
+// The gradient runs left to right across the arc's bounding box, and a value's
+// horizontal position on a semicircle is not linear in the value, so each stop
+// is placed where its own value actually sits.
+function valueToOffset(value: number) {
+  return (1 + Math.cos((Math.PI / 180) * valueToAngle(value))) / 2
 }
 
 function moodLabel(value: number): string {
@@ -76,11 +83,15 @@ export function MarketMoodCard() {
 
       <div className="moodGauge" aria-label={label ? `Market mood ${label}, index ${Math.round(value ?? 0)}` : 'Market mood'}>
         <svg viewBox="0 0 200 120" role="img" focusable="false">
-          {MOOD_BANDS.map((band, index) => {
-            const start = valueToAngle(band.from) + (index === 0 ? 0 : BAND_GAP_DEG / 2)
-            const end = valueToAngle(band.to) - (index === MOOD_BANDS.length - 1 ? 0 : BAND_GAP_DEG / 2)
-            return <path key={band.className} d={arcPath(100, 100, 74, start, end)} className={`moodArc ${band.className}`} />
-          })}
+          <defs>
+            <linearGradient id="moodRamp" gradientUnits="userSpaceOnUse" x1={26} y1={0} x2={174} y2={0}>
+              {MOOD_STOPS.map((stop) => (
+                <stop key={`${stop.className}-${stop.at}`} offset={valueToOffset(stop.at)} className={stop.className} />
+              ))}
+            </linearGradient>
+          </defs>
+
+          <path d={arcPath(100, 100, 74, 180, 360)} className="moodArc" stroke="url(#moodRamp)" />
 
           <circle cx={pointer.x} cy={pointer.y} r={9} className="moodPointerOuter" />
           <circle cx={pointer.x} cy={pointer.y} r={5} className="moodPointerInner" />
