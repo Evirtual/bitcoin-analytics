@@ -21,6 +21,24 @@ function arcPath(cx: number, cy: number, r: number, startDeg: number, endDeg: nu
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} ${sweep} ${end.x} ${end.y}`
 }
 
+// The colour bands are the label thresholds, so the ring and the word always
+// agree about which zone the needle is in. Boundaries sit between the two
+// values they separate. A small gap keeps the rounded ends from overlapping.
+const MOOD_BANDS = [
+  { from: 0, to: 24.5, className: 'moodArcFreeze' },
+  { from: 24.5, to: 44.5, className: 'moodArcCautious' },
+  { from: 44.5, to: 55.5, className: 'moodArcBalanced' },
+  { from: 55.5, to: 74.5, className: 'moodArcOptimistic' },
+  { from: 74.5, to: 100, className: 'moodArcEuphoric' },
+]
+
+const BAND_GAP_DEG = 1.5
+
+// 0 → left of the semicircle, 100 → right.
+function valueToAngle(value: number) {
+  return 180 + (value / 100) * 180
+}
+
 function moodLabel(value: number): string {
   // Intentionally avoids the words “fear” and “greed”.
   if (value <= 24) return 'Deep Freeze'
@@ -38,8 +56,7 @@ export function MarketMoodCard() {
 
   const pointer = useMemo(() => {
     const v = value !== undefined ? clamp01(value / 100) : 0
-    // 0 → left, 100 → right across the top semicircle.
-    const angle = 180 + v * 180
+    const angle = valueToAngle(v * 100)
     const cx = 100
     const cy = 100
     const r = 74
@@ -59,9 +76,11 @@ export function MarketMoodCard() {
 
       <div className="moodGauge" aria-label={label ? `Market mood ${label}, index ${Math.round(value ?? 0)}` : 'Market mood'}>
         <svg viewBox="0 0 200 120" role="img" focusable="false">
-          <path d={arcPath(100, 100, 74, 180, 240)} className="moodArc moodArcLow" />
-          <path d={arcPath(100, 100, 74, 240, 300)} className="moodArc moodArcMid" />
-          <path d={arcPath(100, 100, 74, 300, 360)} className="moodArc moodArcHigh" />
+          {MOOD_BANDS.map((band, index) => {
+            const start = valueToAngle(band.from) + (index === 0 ? 0 : BAND_GAP_DEG / 2)
+            const end = valueToAngle(band.to) - (index === MOOD_BANDS.length - 1 ? 0 : BAND_GAP_DEG / 2)
+            return <path key={band.className} d={arcPath(100, 100, 74, start, end)} className={`moodArc ${band.className}`} />
+          })}
 
           <circle cx={pointer.x} cy={pointer.y} r={9} className="moodPointerOuter" />
           <circle cx={pointer.x} cy={pointer.y} r={5} className="moodPointerInner" />

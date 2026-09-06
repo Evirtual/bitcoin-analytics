@@ -758,15 +758,26 @@
   opacity: 0.95;
 }
 
-.moodArcLow {
+/* A fixed sentiment ramp. These deliberately do not use --accent: that variable
+   carries the selected asset, and the mood of the market has nothing to do with
+   which coin you happen to be looking at. */
+.moodArcFreeze {
   stroke: color-mix(in srgb, var(--danger) 80%, transparent);
 }
 
-.moodArcMid {
-  stroke: color-mix(in srgb, var(--accent) 70%, transparent);
+.moodArcCautious {
+  stroke: color-mix(in srgb, #f97316 80%, transparent);
 }
 
-.moodArcHigh {
+.moodArcBalanced {
+  stroke: color-mix(in srgb, #eab308 80%, transparent);
+}
+
+.moodArcOptimistic {
+  stroke: color-mix(in srgb, #84cc16 78%, transparent);
+}
+
+.moodArcEuphoric {
   stroke: color-mix(in srgb, var(--accent2) 75%, transparent);
 }
 
