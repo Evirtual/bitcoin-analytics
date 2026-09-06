@@ -78,6 +78,9 @@ const PortfolioHistoryChartCard = lazy(() =>
 const AssetComparisonChartCard = lazy(() =>
   import('./components/charts/AssetComparisonChartCard').then((m) => ({ default: m.AssetComparisonChartCard })),
 )
+const CorrelationChartCard = lazy(() =>
+  import('./components/charts/CorrelationChartCard').then((m) => ({ default: m.CorrelationChartCard })),
+)
 
 function ChartFallback() {
   return (
@@ -99,6 +102,7 @@ type MarketCardId =
   | 'drawdown'
   | 'volatility'
   | 'comparison'
+  | 'correlation'
 
 const DEFAULT_MARKET_CARD_ORDER: MarketCardId[] = [
   'price',
@@ -110,6 +114,7 @@ const DEFAULT_MARKET_CARD_ORDER: MarketCardId[] = [
   'drawdown',
   'volatility',
   'comparison',
+  'correlation',
 ]
 
 const MARKET_CARD_STORAGE_KEY = 'bitcoin-analytics.marketCardOrder.v2'
@@ -557,6 +562,16 @@ function App() {
       comparison: {
         node: (
           <AssetComparisonChartCard
+            range={comparisonRange}
+            onRangeChange={setComparisonRange}
+            series={comparisonCandles.data}
+            isLoading={comparisonCandles.isLoading}
+          />
+        ),
+      },
+      correlation: {
+        node: (
+          <CorrelationChartCard
             range={comparisonRange}
             onRangeChange={setComparisonRange}
             series={comparisonCandles.data}

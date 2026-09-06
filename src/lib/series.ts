@@ -126,3 +126,83 @@ export function computeNormalizedPerformance(
     return row
   })
 }
+
+function toReturns(points: CandlePoint[]): Array<{ t: string; r: number }> {
+  const out: Array<{ t: string; r: number }> = []
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1]!.price
+    const cur = points[i]!.price
+    const r = prev > 0 && Number.isFinite(prev) && Number.isFinite(cur) ? (cur - prev) / prev : NaN
+    out.push({ t: points[i]!.t, r })
+  }
+  return out
+}
+
+function pearson(xs: number[], ys: number[]) {
+  const paired: Array<[number, number]> = []
+  for (let i = 0; i < xs.length; i++) {
+    const x = xs[i]!
+    const y = ys[i]!
+    if (Number.isFinite(x) && Number.isFinite(y)) paired.push([x, y])
+  }
+  if (paired.length < 3) return NaN
+
+  let mx = 0
+  let my = 0
+  for (const [x, y] of paired) {
+    mx += x
+    my += y
+  }
+  mx /= paired.length
+  my /= paired.length
+
+  let sxy = 0
+  let sxx = 0
+  let syy = 0
+  for (const [x, y] of paired) {
+    const dx = x - mx
+    const dy = y - my
+    sxy += dx * dy
+    sxx += dx * dx
+    syy += dy * dy
+  }
+
+  const den = Math.sqrt(sxx * syy)
+  return den > 0 ? sxy / den : NaN
+}
+
+export function computeRollingCorrelation(
+  series: Array<{ assetKey: string; candles: CandlePoint[] | undefined }>,
+  baseKey: string,
+  range: CandleRange,
+) {
+  // Rolling Pearson correlation of hourly returns against the base asset.
+  const base = series.find((item) => item.assetKey === baseKey)?.candles ?? []
+  const others = series.filter((item) => item.assetKey !== baseKey && (item.candles?.length ?? 0) > 2)
+  if (base.length < 3 || !others.length) return [] as Array<Record<string, number | string>>
+
+  const windowHours = range === '1D' ? 6 : range === '1W' ? 24 : 24 * 7
+  const baseReturns = toReturns(base)
+  if (baseReturns.length < windowHours) return [] as Array<Record<string, number | string>>
+
+  // Align by timestamp label so assets with gaps don't drift against the base.
+  const otherReturns = others.map((item) => ({
+    assetKey: item.assetKey,
+    byTime: new Map(toReturns(item.candles ?? []).map((p) => [p.t, p.r])),
+  }))
+
+  const out: Array<Record<string, number | string>> = []
+  for (let i = windowHours - 1; i < baseReturns.length; i++) {
+    const window = baseReturns.slice(i - windowHours + 1, i + 1)
+    const row: Record<string, number | string> = { t: baseReturns[i]!.t }
+    for (const other of otherReturns) {
+      const xs = window.map((p) => p.r)
+      const ys = window.map((p) => other.byTime.get(p.t) ?? NaN)
+      const c = pearson(xs, ys)
+      if (Number.isFinite(c)) row[other.assetKey] = c
+    }
+    out.push(row)
+  }
+
+  return out
+}
