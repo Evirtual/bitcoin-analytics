@@ -2,7 +2,7 @@ import { Area, AreaChart, CartesianGrid, Line, Tooltip, XAxis, YAxis } from 'rec
 import type { CandlePoint, CandleRange } from './types'
 import { ChartFrame } from './ChartFrame'
 import { RangeToggle } from './range'
-import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
+import { paddedDomain, tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import { usd } from '../../lib/format'
 import { computePriceBands } from '../../lib/series'
 
@@ -37,7 +37,11 @@ export function PriceBandsChartCard({
               <AreaChart width={width} height={height} data={series} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid stroke="var(--chartGrid)" />
                 <XAxis dataKey="t" tick={{ fontSize: compact ? 11 : 12, fill: 'var(--chartTick)' }} minTickGap={48} />
-                <YAxis tick={{ fontSize: compact ? 11 : 12, fill: 'var(--chartTick)' }} width={compact ? 56 : 72} />
+                <YAxis
+                  domain={paddedDomain}
+                  tick={{ fontSize: compact ? 11 : 12, fill: 'var(--chartTick)' }}
+                  width={compact ? 56 : 72}
+                />
                 <Tooltip
                   contentStyle={tooltipContentStyle}
                   labelStyle={tooltipLabelStyle}

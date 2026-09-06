@@ -1,8 +1,8 @@
-import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts'
 import type { CandlePoint, CandleRange } from './types'
 import { ChartFrame } from './ChartFrame'
 import { RangeToggle } from './range'
-import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
+import { paddedDomain, tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import { usd } from '../../lib/format'
 
 export function PriceChartCard({
@@ -36,7 +36,7 @@ export function PriceChartCard({
             const xMinTickGap = compact ? 32 : 48
 
             return (
-              <AreaChart
+              <LineChart
                 width={width}
                 height={height}
                 data={candles}
@@ -49,6 +49,7 @@ export function PriceChartCard({
                   minTickGap={xMinTickGap}
                 />
                 <YAxis
+                  domain={paddedDomain}
                   tick={{ fontSize: tickFontSize, fill: 'var(--chartTick)' }}
                   axisLine={{ stroke: 'var(--chartAxis)' }}
                   width={yAxisWidth}
@@ -62,14 +63,14 @@ export function PriceChartCard({
                     return [Number.isFinite(n) ? usd.format(n) : String(value), 'Price']
                   }}
                 />
-                <Area
+                <Line
                   type="monotone"
                   dataKey="price"
+                  dot={false}
                   stroke="var(--accent)"
-                  fill="var(--accent)"
-                  fillOpacity={0.18}
+                  strokeWidth={2}
                 />
-              </AreaChart>
+              </LineChart>
             )
           }}
         </ChartFrame>

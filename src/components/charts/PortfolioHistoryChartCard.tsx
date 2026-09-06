@@ -1,9 +1,9 @@
-import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts'
 import { compact, usd } from '../../lib/format'
 import type { PortfolioStats, PortfolioValuePoint } from '../../lib/portfolio'
 import { ChartFrame } from './ChartFrame'
 import { RangeToggle } from './range'
-import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
+import { paddedDomain, tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import type { CandleRange } from './types'
 
 export function PortfolioHistoryChartCard({
@@ -55,7 +55,7 @@ export function PortfolioHistoryChartCard({
               const xMinTickGap = compactView ? 40 : 64
 
               return (
-                <AreaChart
+                <LineChart
                   width={width}
                   height={height}
                   data={points}
@@ -71,7 +71,7 @@ export function PortfolioHistoryChartCard({
                     tick={{ fontSize: tickFontSize, fill: 'var(--chartTick)' }}
                     axisLine={{ stroke: 'var(--chartAxis)' }}
                     width={yAxisWidth}
-                    domain={['auto', 'auto']}
+                    domain={paddedDomain}
                     tickFormatter={(value) => {
                       const n = Number(value)
                       return Number.isFinite(n) ? `$${compact.format(n)}` : ''
@@ -86,14 +86,14 @@ export function PortfolioHistoryChartCard({
                       return [Number.isFinite(n) ? usd.format(n) : String(value), 'Value']
                     }}
                   />
-                  <Area
+                  <Line
                     type="monotone"
                     dataKey="value"
+                    dot={false}
                     stroke="var(--accent)"
-                    fill="var(--accent)"
-                    fillOpacity={0.18}
+                    strokeWidth={2}
                   />
-                </AreaChart>
+                </LineChart>
               )
             }}
           </ChartFrame>
