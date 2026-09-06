@@ -47,12 +47,27 @@ export function PriceBandsChartCard({
                   labelStyle={tooltipLabelStyle}
                   itemStyle={tooltipItemStyle}
                   formatter={(value, name) => {
+                    if (Array.isArray(value)) {
+                      const [low, high] = value.map((v) => Number(v))
+                      return [
+                        Number.isFinite(low) && Number.isFinite(high)
+                          ? `${usd.format(low)} – ${usd.format(high)}`
+                          : String(value),
+                        String(name),
+                      ]
+                    }
                     const n = Number(value)
                     return [Number.isFinite(n) ? usd.format(n) : String(value), String(name)]
                   }}
                 />
-                <Area type="monotone" dataKey="upper" stroke="transparent" fill="var(--accent)" fillOpacity={0.1} name="Upper" />
-                <Area type="monotone" dataKey="lower" stroke="transparent" fill="var(--card2)" fillOpacity={1} name="Lower" />
+                <Area
+                  type="monotone"
+                  dataKey="band"
+                  stroke="transparent"
+                  fill="var(--accent)"
+                  fillOpacity={0.14}
+                  name="Band"
+                />
                 <Line type="monotone" dataKey="price" dot={false} stroke="var(--accent)" strokeWidth={2} name="Price" />
                 <Line type="monotone" dataKey="mid" dot={false} stroke="var(--accent2)" strokeWidth={1.7} name="Mid" />
               </AreaChart>

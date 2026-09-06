@@ -96,11 +96,18 @@ export function computePriceBands(points: CandlePoint[], windowSize: number) {
     const slice = points.slice(start, index + 1).map((p) => p.price).filter(Number.isFinite)
     const avg = slice.length ? slice.reduce((acc, price) => acc + price, 0) / slice.length : point.price
     const sd = stdev(slice)
+    const upper = Number.isFinite(avg + sd * 2) ? avg + sd * 2 : point.price
+    const lower = Number.isFinite(avg - sd * 2) ? avg - sd * 2 : point.price
+
     return {
       ...point,
       mid: Number.isFinite(avg) ? avg : point.price,
-      upper: Number.isFinite(avg + sd * 2) ? avg + sd * 2 : point.price,
-      lower: Number.isFinite(avg - sd * 2) ? avg - sd * 2 : point.price,
+      upper,
+      lower,
+      // Drawn as one range area rather than a fill masked by another fill: the
+      // envelope is the pair, and the axis then frames lower..upper rather than
+      // having to reach zero to hold a stack up.
+      band: [lower, upper] as [number, number],
     }
   })
 }
