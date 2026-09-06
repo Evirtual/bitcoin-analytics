@@ -62,7 +62,9 @@ export function VolumeChartCard({
                     return [Number.isFinite(n) ? compact.format(n) : String(value), 'Volume']
                   }}
                 />
-                <Bar dataKey="volume" fill="var(--accent)" opacity={0.65} />
+                {/* recharts 3 never paints these bars through their entry animation --
+                    the rectangle groups render empty -- so they are drawn straight away. */}
+                <Bar dataKey="volume" fill="var(--accent)" opacity={0.65} isAnimationActive={false} />
               </BarChart>
             )
           }}

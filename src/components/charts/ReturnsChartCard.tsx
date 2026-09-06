@@ -60,7 +60,9 @@ export function ReturnsChartCard({
                     return [Number.isFinite(n) ? `${n.toFixed(2)}%` : String(value), 'Return']
                   }}
                 />
-                <Bar dataKey="ret" fill="var(--accent)" opacity={0.72} />
+                {/* recharts 3 never paints these bars through their entry animation --
+                    the rectangle groups render empty -- so they are drawn straight away. */}
+                <Bar dataKey="ret" fill="var(--accent)" opacity={0.72} isAnimationActive={false} />
               </BarChart>
             )
           }}
