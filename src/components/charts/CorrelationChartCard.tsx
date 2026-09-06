@@ -7,6 +7,8 @@ import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './char
 import { ASSETS } from '../../assets/catalog'
 import { computeRollingCorrelation } from '../../lib/series'
 
+// Correlation is symmetric, so BTC stays the reference and the drawn lines are
+// whatever else is on the field -- each in its own accent.
 const BASE_ASSET: AssetKey = 'BTC'
 
 export function CorrelationChartCard({

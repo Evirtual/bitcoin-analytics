@@ -306,7 +306,12 @@ function App() {
   const returnsCandles = useCandles(assetKey, returnsDays)
   const drawdownCandles = useCandles(assetKey, drawdownDays)
   const volCandles = useCandles(assetKey, volDays)
-  const comparisonCandles = useCandlesMany(['BTC', 'ETH', 'BNB'], comparisonDays)
+  // Selecting BTC has nothing to pair it against, so it opens the field to every asset.
+  const comparisonAssetKeys = useMemo<AssetKey[]>(
+    () => (assetKey === 'BTC' ? supportedAssetKeys : ['BTC', assetKey]),
+    [assetKey, supportedAssetKeys],
+  )
+  const comparisonCandles = useCandlesMany(comparisonAssetKeys, comparisonDays)
 
   const balances = useAssetBalances(address, assetKey, chainIds)
   const gas = useGasBalances(address, chainIds)
