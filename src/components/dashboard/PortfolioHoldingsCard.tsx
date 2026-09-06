@@ -4,6 +4,7 @@ import { ASSETS, type AssetKey } from '../../assets/catalog'
 import type { AssetChainRow } from '../../hooks/useAssetBalances'
 import { usd } from '../../lib/format'
 import { AssetIcon } from '../AssetIcon'
+import { InfoTip } from '../InfoTip'
 
 export type HoldingRow = {
   assetKey: AssetKey
@@ -45,7 +46,13 @@ export function PortfolioHoldingsCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>Holdings</h2>
+        <span className="cardHeading">
+          <h2>Holdings</h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="About holdings" title="Holdings">
+            Every supported asset detected in the connected wallet, with its price, its value and its share of the
+            total. Expand a row to see how the balance splits across chains.
+          </InfoTip>
+        </span>
         <div className="muted small">{usd.format(totalUsd)}</div>
       </div>
 

@@ -6,6 +6,7 @@ import { RangeToggle } from './range'
 import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import { ASSETS } from '../../assets/catalog'
 import { ChartLegend } from './ChartLegend'
+import { InfoTip } from '../InfoTip'
 import { computeRollingCorrelation } from '../../lib/series'
 
 // Correlation is symmetric, so BTC stays the reference and the drawn lines are
@@ -29,9 +30,16 @@ export function CorrelationChartCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>
-          Correlation vs {BASE_ASSET} ({range})
-        </h2>
+        <span className="cardHeading">
+          <h2>
+            Correlation vs {BASE_ASSET} ({range})
+          </h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="What the correlation chart shows" title="Correlation">
+            How closely each asset's hourly moves have tracked BTC's, over a rolling window. +1 is lockstep, 0 is no
+            relationship, -1 is the exact opposite. BTC itself is not drawn: it would be a flat line at 1. Stablecoins
+            sit near zero by design, so they are drawn faintly.
+          </InfoTip>
+        </span>
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
 

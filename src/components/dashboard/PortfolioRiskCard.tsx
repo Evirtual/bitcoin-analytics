@@ -1,5 +1,6 @@
 import type { PortfolioConcentration, PortfolioStats } from '../../lib/portfolio'
 import type { CandleRange } from '../charts/types'
+import { InfoTip } from '../InfoTip'
 
 function signed(value: number, digits = 2) {
   return `${value >= 0 ? '+' : ''}${value.toFixed(digits)}%`
@@ -21,7 +22,14 @@ export function PortfolioRiskCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>Portfolio Risk ({range})</h2>
+        <span className="cardHeading">
+          <h2>Portfolio Risk ({range})</h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="About portfolio risk" title="Portfolio risk">
+            Volatility, worst peak-to-trough fall and return, all measured on your portfolio's own value over the
+            window. Top Holding is the largest position's share; Effective Assets and HHI say how concentrated the mix
+            is — an HHI of 1.0 means everything sits in one asset.
+          </InfoTip>
+        </span>
       </div>
 
       {ready ? (

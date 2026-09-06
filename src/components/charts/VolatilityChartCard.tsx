@@ -4,6 +4,7 @@ import { ChartFrame } from './ChartFrame'
 import { RangeToggle } from './range'
 import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import { computeRollingVolatility } from '../../lib/series'
+import { InfoTip } from '../InfoTip'
 
 export function VolatilityChartCard({
   range,
@@ -21,7 +22,12 @@ export function VolatilityChartCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>Rolling Volatility ({range})</h2>
+        <span className="cardHeading">
+          <h2>Rolling Volatility ({range})</h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="What the volatility chart shows" title="Rolling volatility">
+            How much the hourly price has been jumping around, measured over a rolling window and scaled to an annual figure so the number is comparable between assets. Higher means bigger moves, up or down — it says nothing about direction.
+          </InfoTip>
+        </span>
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
 

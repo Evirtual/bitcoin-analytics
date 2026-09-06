@@ -3,6 +3,7 @@ import { ASSETS, type AssetKey } from '../../assets/catalog'
 import { usd } from '../../lib/format'
 import { ChartFrame } from './ChartFrame'
 import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
+import { InfoTip } from '../InfoTip'
 
 // The donut is sized from min(width, height), so with the legend moved
 // alongside it this box is what sets both the ring's size and the card's
@@ -37,7 +38,12 @@ export function PortfolioChartCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>Portfolio Allocation</h2>
+        <span className="cardHeading">
+          <h2>Portfolio Allocation</h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="About allocation" title="Allocation">
+            Each asset's share of the portfolio by current value. Assets worth nothing are left out of the ring.
+          </InfoTip>
+        </span>
         <div className="muted small">{usd.format(totalUsd)}</div>
       </div>
 

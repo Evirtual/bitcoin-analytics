@@ -16,6 +16,7 @@ import { AssetIcon } from './components/AssetIcon'
 import type { CandleRange } from './components/charts/types'
 import { rangeToDays } from './components/charts/rangeUtils'
 import { Header } from './components/dashboard/Header'
+import { InfoTip } from './components/InfoTip'
 import { MarketMoodCard } from './components/dashboard/MarketMoodCard'
 import { PortfolioHoldingsCard } from './components/dashboard/PortfolioHoldingsCard'
 import { PortfolioRiskCard } from './components/dashboard/PortfolioRiskCard'
@@ -695,7 +696,12 @@ function App() {
         <MarketMoodCard />
 
         <div className="kpiCard">
-          <div className="kpiLabel">{assetKey} Price</div>
+          <div className="kpiLabelRow">
+            <div className="kpiLabel">{assetKey} Price</div>
+            <InfoTip className="cardHeadingInfo" size={14} label="About the spot price" title="Spot price">
+              The latest price from Kraken, falling back to Coinbase, with the change over the past 24 hours.
+            </InfoTip>
+          </div>
           <div className="kpiValue">
             {spotUsd.data ? `$${spotUsd.data.toLocaleString()}` : spotUsd.isLoading ? 'Loading...' : '-'}
           </div>
@@ -712,7 +718,12 @@ function App() {
         </div>
 
         <div className="kpiCard">
-          <div className="kpiLabel">Momentum</div>
+          <div className="kpiLabelRow">
+            <div className="kpiLabel">Momentum</div>
+            <InfoTip className="cardHeadingInfo" size={14} label="About momentum" title="Momentum">
+              The 24-hour change added to the change across the selected chart range. When that range is 1W or 1M it already contains the last day, so the most recent 24 hours is counted twice.
+            </InfoTip>
+          </div>
           <div className="kpiValue">
             {change24h.data !== undefined && periodReturn !== undefined
               ? `${change24h.data + periodReturn >= 0 ? '+' : ''}${(change24h.data + periodReturn).toFixed(2)}%`
@@ -732,7 +743,12 @@ function App() {
         </div>
 
         <div className="kpiCard">
-          <div className="kpiLabel">Range ({priceRange})</div>
+          <div className="kpiLabelRow">
+            <div className="kpiLabel">Range ({priceRange})</div>
+            <InfoTip className="cardHeadingInfo" size={14} label="About the range" title="Range">
+              The gap between the highest and lowest price in the window, as a percentage of the low. The two figures beneath are that low and high.
+            </InfoTip>
+          </div>
           <div className="kpiValue">
             {range7d
               ? `${range7d.pct.toFixed(2)}%`
@@ -746,7 +762,12 @@ function App() {
         </div>
 
         <div className="kpiCard">
-          <div className="kpiLabel">Points ({priceRange})</div>
+          <div className="kpiLabelRow">
+            <div className="kpiLabel">Points ({priceRange})</div>
+            <InfoTip className="cardHeadingInfo" size={14} label="About the point count" title="Points">
+              How many hourly candles the exchange returned for this window. Fewer than the hours in the window means there are gaps in the data.
+            </InfoTip>
+          </div>
           <div className="kpiValue">
             {priceCandles.data
               ? `${priceCandles.data.length}`
@@ -758,7 +779,12 @@ function App() {
         </div>
 
         <div className="kpiCard">
-          <div className="kpiLabel">Return ({priceRange})</div>
+          <div className="kpiLabelRow">
+            <div className="kpiLabel">Return ({priceRange})</div>
+            <InfoTip className="cardHeadingInfo" size={14} label="About the return" title="Return">
+              The change from the first candle in the window to the last. It sees only the two endpoints, so a round trip that ends where it started reads near zero however violent it was.
+            </InfoTip>
+          </div>
           <div className="kpiValue">
             {periodReturn !== undefined
               ? `${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%`
@@ -779,7 +805,12 @@ function App() {
 
 
         <div className="kpiCard">
-          <div className="kpiLabel">Avg Volume ({volumeRange})</div>
+          <div className="kpiLabelRow">
+            <div className="kpiLabel">Avg Volume ({volumeRange})</div>
+            <InfoTip className="cardHeadingInfo" size={14} label="About average volume" title="Average volume">
+              Mean volume per hour across the window, counted in units of the asset rather than in dollars.
+            </InfoTip>
+          </div>
           <div className="kpiValue">
             {avgVolume !== undefined
               ? compact.format(avgVolume)
@@ -848,7 +879,12 @@ function App() {
         <>
           <div className="portfolioSummary">
             <div className="kpiCard portfolioHero">
-              <div className="kpiLabel">Portfolio Total</div>
+              <div className="kpiLabelRow">
+                <div className="kpiLabel">Portfolio Total</div>
+                <InfoTip className="cardHeadingInfo" size={14} label="About the portfolio total" title="Portfolio total">
+                  Every supported asset found in the connected wallet, valued at the current price, with the change over 24 hours.
+                </InfoTip>
+              </div>
               <div className="kpiValue">{usd.format(portfolioByAsset.totalUsd)}</div>
               <div className="kpiSub">
                 {portfolioChange24h ? (
@@ -875,13 +911,23 @@ function App() {
             </div>
 
             <div className="kpiCard portfolioGasCard">
-              <div className="kpiLabel">Selected Holding</div>
+              <div className="kpiLabelRow">
+                <div className="kpiLabel">Selected Holding</div>
+                <InfoTip className="cardHeadingInfo" size={14} label="About the selected holding" title="Selected holding">
+                  What the wallet holds of the asset selected above, summed across the chains this app reads.
+                </InfoTip>
+              </div>
               <div className="kpiValue">{portfolioUsd !== undefined ? usd.format(portfolioUsd) : '-'}</div>
               <div className="kpiSub muted">{selectedHoldingText ?? '-'}</div>
             </div>
 
             <div className="kpiCard">
-              <div className="kpiLabel">Network Status</div>
+              <div className="kpiLabelRow">
+                <div className="kpiLabel">Network Status</div>
+                <InfoTip className="cardHeadingInfo" size={14} label="About network status" title="Network status">
+                  Whether every balance read came back. A number is how many did not, which means the total above is understated rather than wrong.
+                </InfoTip>
+              </div>
               <div className="kpiValue">{balanceIssueCount ? `${balanceIssueCount}` : 'OK'}</div>
               <div className="kpiSub muted">
                 {balanceIssueCount ? 'Some balance reads are incomplete' : 'Balance reads completed'}
@@ -889,7 +935,12 @@ function App() {
             </div>
 
             <div className="kpiCard">
-              <div className="kpiLabel">Gas</div>
+              <div className="kpiLabelRow">
+                <div className="kpiLabel">Gas</div>
+                <InfoTip className="cardHeadingInfo" size={14} label="About gas balances" title="Gas">
+                  Native token balances on each chain — the coins transaction fees are actually paid from.
+                </InfoTip>
+              </div>
               <div className="kpiValue">{gas.isLoading ? 'Loading...' : gas.data?.length ? `${gas.data.length}` : '-'}</div>
               <div className="kpiSub muted">{gasSummary}</div>
             </div>

@@ -5,6 +5,7 @@ import { RangeToggle } from './range'
 import { paddedDomain, tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import { usd } from '../../lib/format'
 import { computeMovingAverage } from '../../lib/series'
+import { InfoTip } from '../InfoTip'
 
 export function MovingAverageChartCard({
   assetKey,
@@ -26,7 +27,12 @@ export function MovingAverageChartCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>{assetKey} Trend</h2>
+        <span className="cardHeading">
+          <h2>{assetKey} Trend</h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="What the trend chart shows" title="Trend">
+            Price with two moving averages over it. The fast one turns first; when it pulls above the slow one, recent trading is running ahead of the longer trend, and the other way round when it drops below.
+          </InfoTip>
+        </span>
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
 

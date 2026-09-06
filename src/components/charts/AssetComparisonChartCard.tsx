@@ -6,6 +6,7 @@ import { RangeToggle } from './range'
 import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import { ASSETS } from '../../assets/catalog'
 import { ChartLegend } from './ChartLegend'
+import { InfoTip } from '../InfoTip'
 import { computeNormalizedPerformance } from '../../lib/series'
 
 export function AssetComparisonChartCard({
@@ -25,7 +26,13 @@ export function AssetComparisonChartCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>Asset Comparison</h2>
+        <span className="cardHeading">
+          <h2>Asset Comparison</h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="What the comparison chart shows" title="Asset comparison">
+            Each asset's percentage change from the start of the window, so coins at wildly different prices can be read
+            on one axis. Selecting BTC opens it to every asset; selecting anything else pairs it against BTC.
+          </InfoTip>
+        </span>
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
 

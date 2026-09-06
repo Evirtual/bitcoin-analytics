@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useFearGreedIndex } from '../../hooks/useFearGreed'
+import { InfoTip } from '../InfoTip'
 
 function clamp01(n: number) {
   return Math.min(1, Math.max(0, n))
@@ -48,7 +49,13 @@ export function MarketMoodCard() {
 
   return (
     <div className="kpiCard moodCard">
-      <div className="kpiLabel">Market Mood</div>
+      <div className="kpiLabelRow">
+        <div className="kpiLabel">Market Mood</div>
+        <InfoTip className="cardHeadingInfo" size={14} label="About market mood" title="Market mood">
+          A crowd sentiment index published by alternative.me, scored 0 to 100. Low means the market is anxious, high
+          means it is confident. It reads mood rather than price, so it can sit high while the price falls.
+        </InfoTip>
+      </div>
 
       <div className="moodGauge" aria-label={label ? `Market mood ${label}, index ${Math.round(value ?? 0)}` : 'Market mood'}>
         <svg viewBox="0 0 200 120" role="img" focusable="false">

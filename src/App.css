@@ -706,6 +706,14 @@
   padding: 0.875rem 0.875rem 0.75rem;
 }
 
+/* Same idea as .cardHeading, for the cards whose title is a kpiLabel. */
+.kpiLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
 .kpiLabel {
   font-size: 0.75rem;
   color: var(--muted);
@@ -958,6 +966,35 @@
   font-size: 0.875rem;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+}
+
+/* Keeps the title and its explainer together on the left so the range toggle
+   stays put on the right. */
+.cardHeading {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.cardHeadingInfo .infoBtn {
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.cardHeadingInfo .infoBtn:hover,
+.cardHeadingInfo .infoBtn:focus-visible {
+  opacity: 1;
+}
+
+/* The market tiles clip their overflow, so a card explainer opens downward and
+   inward rather than escaping the card. */
+.cardHeadingInfo .infoTooltip {
+  top: calc(100% + 0.5rem);
+  bottom: auto;
+  left: 0;
+  right: auto;
+  max-width: min(22rem, 70vw);
 }
 
 .chartLegend {

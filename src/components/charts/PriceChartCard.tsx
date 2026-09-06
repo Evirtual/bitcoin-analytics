@@ -4,6 +4,7 @@ import { ChartFrame } from './ChartFrame'
 import { RangeToggle } from './range'
 import { paddedDomain, tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import { usd } from '../../lib/format'
+import { InfoTip } from '../InfoTip'
 
 export function PriceChartCard({
   assetKey,
@@ -21,9 +22,14 @@ export function PriceChartCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>
-          {assetKey} Price ({range})
-        </h2>
+        <span className="cardHeading">
+          <h2>
+            {assetKey} Price ({range})
+          </h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="What the price chart shows" title="Price">
+            Hourly closing price over the window you pick. The axis frames the range the price actually traded in rather than starting at zero, so a two percent move is still visible.
+          </InfoTip>
+        </span>
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
 

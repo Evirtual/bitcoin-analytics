@@ -5,6 +5,7 @@ import { RangeToggle } from './range'
 import { paddedDomain, tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import { usd } from '../../lib/format'
 import { computePriceBands } from '../../lib/series'
+import { InfoTip } from '../InfoTip'
 
 export function PriceBandsChartCard({
   assetKey,
@@ -25,7 +26,12 @@ export function PriceBandsChartCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>{assetKey} Bands</h2>
+        <span className="cardHeading">
+          <h2>{assetKey} Bands</h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="What the bands chart shows" title="Bands">
+            A moving average with a shaded band two standard deviations either side of it. Price near an edge is unusual for how the market has been trading lately; a narrow band means a quiet stretch, a wide one means a violent one.
+          </InfoTip>
+        </span>
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
 

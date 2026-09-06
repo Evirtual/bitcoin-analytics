@@ -4,6 +4,7 @@ import { ChartFrame } from './ChartFrame'
 import { RangeToggle } from './range'
 import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import { computeDailyReturns } from '../../lib/series'
+import { InfoTip } from '../InfoTip'
 
 export function ReturnsChartCard({
   range,
@@ -21,7 +22,12 @@ export function ReturnsChartCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>Daily Returns ({range})</h2>
+        <span className="cardHeading">
+          <h2>Daily Returns ({range})</h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="What the daily returns chart shows" title="Daily returns">
+            Each day's percentage change, first candle to last. Bars above the line are up days, below it are down days, and the height is how big the day was.
+          </InfoTip>
+        </span>
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
 

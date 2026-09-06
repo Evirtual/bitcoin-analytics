@@ -1,6 +1,7 @@
 import type { CandlePoint, CandleRange } from './types'
 import { RangeToggle } from './range'
 import { computeDailyReturns } from '../../lib/series'
+import { InfoTip } from '../InfoTip'
 
 function heatClass(value: number) {
   if (value >= 5) return 'heatCell heatCellStrongPos'
@@ -26,7 +27,12 @@ export function ReturnsHeatmapCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>Return Heatmap</h2>
+        <span className="cardHeading">
+          <h2>Return Heatmap</h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="What the return heatmap shows" title="Return heatmap">
+            The same daily returns as a grid of coloured cells. Green is an up day, red a down day, and days that moved less than one percent stay faint.
+          </InfoTip>
+        </span>
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
 

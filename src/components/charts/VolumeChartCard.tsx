@@ -4,6 +4,7 @@ import { ChartFrame } from './ChartFrame'
 import { RangeToggle } from './range'
 import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import { compact } from '../../lib/format'
+import { InfoTip } from '../InfoTip'
 
 export function VolumeChartCard({
   assetKey,
@@ -21,9 +22,14 @@ export function VolumeChartCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>
-          {assetKey} Volume ({range})
-        </h2>
+        <span className="cardHeading">
+          <h2>
+            {assetKey} Volume ({range})
+          </h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="What the volume chart shows" title="Volume">
+            How much of the asset changed hands each hour, in units of the asset. Tall bars mark the hours when a move had real trading behind it; a price move on thin volume convinces fewer people.
+          </InfoTip>
+        </span>
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
 

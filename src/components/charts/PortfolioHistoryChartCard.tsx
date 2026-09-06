@@ -4,6 +4,7 @@ import type { PortfolioStats, PortfolioValuePoint } from '../../lib/portfolio'
 import { ChartFrame } from './ChartFrame'
 import { RangeToggle } from './range'
 import { paddedDomain, tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
+import { InfoTip } from '../InfoTip'
 import type { CandleRange } from './types'
 
 export function PortfolioHistoryChartCard({
@@ -22,7 +23,14 @@ export function PortfolioHistoryChartCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>Portfolio Value ({range})</h2>
+        <span className="cardHeading">
+          <h2>Portfolio Value ({range})</h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="About portfolio value" title="Portfolio value">
+            Your holdings priced at each hour across the window. The amounts used are the ones you hold now, applied
+            all the way back, so this is what today's portfolio would have been worth then — not what you actually
+            held at the time.
+          </InfoTip>
+        </span>
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
 

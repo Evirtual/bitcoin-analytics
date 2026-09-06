@@ -3,6 +3,7 @@ import type { AssetKey } from '../../assets/catalog'
 import { usd } from '../../lib/format'
 import type { CostBasisSummary } from '../../lib/portfolio'
 import { AssetIcon } from '../AssetIcon'
+import { InfoTip } from '../InfoTip'
 
 export function CostBasisCard({
   summary,
@@ -39,7 +40,13 @@ export function CostBasisCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>Cost Basis &amp; P&amp;L</h2>
+        <span className="cardHeading">
+          <h2>Cost Basis &amp; P&amp;L</h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="About cost basis" title="Cost basis and P&L">
+            Enter what you paid per unit and this works out the profit or loss against the current price. The figures
+            you type are kept in this browser only — they are never sent anywhere.
+          </InfoTip>
+        </span>
         {hasEntries ? (
           <button className="btn holdingsChainBtn" type="button" onClick={onClearAll}>
             Clear

@@ -4,6 +4,7 @@ import { ChartFrame } from './ChartFrame'
 import { RangeToggle } from './range'
 import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import { computeDrawdown } from '../../lib/series'
+import { InfoTip } from '../InfoTip'
 
 export function DrawdownChartCard({
   assetKey,
@@ -23,9 +24,14 @@ export function DrawdownChartCard({
   return (
     <div className="card">
       <div className="cardHeader">
-        <h2>
-          {assetKey} Drawdown ({range})
-        </h2>
+        <span className="cardHeading">
+          <h2>
+            {assetKey} Drawdown ({range})
+          </h2>
+          <InfoTip className="cardHeadingInfo" size={15} label="What the drawdown chart shows" title="Drawdown">
+            How far below its own highest point the price is sitting, at each moment in the window. Zero means it is at the peak; minus five percent means it would take a five percent rise to get back there.
+          </InfoTip>
+        </span>
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
 
