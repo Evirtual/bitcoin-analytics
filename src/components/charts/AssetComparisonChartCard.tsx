@@ -5,6 +5,7 @@ import { ChartFrame } from './ChartFrame'
 import { RangeToggle } from './range'
 import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import { ASSETS } from '../../assets/catalog'
+import { ChartLegend } from './ChartLegend'
 import { computeNormalizedPerformance } from '../../lib/series'
 
 export function AssetComparisonChartCard({
@@ -28,6 +29,8 @@ export function AssetComparisonChartCard({
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
 
+      <ChartLegend assetKeys={visibleAssets.map((item) => item.assetKey)} />
+
       {data.length && visibleAssets.length ? (
         <ChartFrame fallback={<div className="empty">Loading chart...</div>}>
           {({ width, height }) => {
@@ -46,17 +49,21 @@ export function AssetComparisonChartCard({
                     return [Number.isFinite(n) ? `${n >= 0 ? '+' : ''}${n.toFixed(2)}%` : String(value), String(name)]
                   }}
                 />
-                {visibleAssets.map((item) => (
-                  <Line
-                    key={item.assetKey}
-                    type="monotone"
-                    dataKey={item.assetKey}
-                    dot={false}
-                    stroke={ASSETS[item.assetKey].accent}
-                    strokeWidth={2}
-                    name={item.assetKey}
-                  />
-                ))}
+                {visibleAssets.map((item) => {
+                  const stable = ASSETS[item.assetKey].stable
+                  return (
+                    <Line
+                      key={item.assetKey}
+                      type="monotone"
+                      dataKey={item.assetKey}
+                      dot={false}
+                      stroke={ASSETS[item.assetKey].accent}
+                      strokeWidth={stable ? 1.25 : 2}
+                      strokeOpacity={stable ? 0.45 : 1}
+                      name={item.assetKey}
+                    />
+                  )
+                })}
               </LineChart>
             )
           }}

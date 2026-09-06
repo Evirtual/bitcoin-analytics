@@ -34,6 +34,9 @@ export type AssetDefinition = {
   spotSymbol?: string
   // Optional override for Kraken pair codes (some assets don't match `${symbol}USD`).
   krakenPair?: string
+  // Pegged to a dollar. Charts that measure movement against another asset have
+  // nothing to show for these, and say so by drawing them faintly.
+  stable?: boolean
   perChain: Partial<Record<ChainId, AssetOnChain | AssetOnChain[]>>
 }
 
@@ -110,6 +113,7 @@ export const ASSETS: Record<AssetKey, AssetDefinition> = {
     label: 'Tether',
     accent: '#26A17B',
     accentSoft: 'rgba(38, 161, 123, 0.18)',
+    stable: true,
     coinbaseProductId: 'USDT-USD',
     spotSymbol: 'USDT',
     perChain: {
@@ -133,6 +137,7 @@ export const ASSETS: Record<AssetKey, AssetDefinition> = {
     label: 'USD Coin',
     accent: '#2775CA',
     accentSoft: 'rgba(39, 117, 202, 0.18)',
+    stable: true,
     coinbaseProductId: 'USDC-USD',
     spotSymbol: 'USDC',
     perChain: {

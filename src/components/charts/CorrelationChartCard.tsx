@@ -5,6 +5,7 @@ import { ChartFrame } from './ChartFrame'
 import { RangeToggle } from './range'
 import { tooltipContentStyle, tooltipItemStyle, tooltipLabelStyle } from './chartTheme'
 import { ASSETS } from '../../assets/catalog'
+import { ChartLegend } from './ChartLegend'
 import { computeRollingCorrelation } from '../../lib/series'
 
 // Correlation is symmetric, so BTC stays the reference and the drawn lines are
@@ -33,6 +34,8 @@ export function CorrelationChartCard({
         </h2>
         <RangeToggle value={range} onChange={onRangeChange} />
       </div>
+
+      <ChartLegend assetKeys={visibleAssets.map((item) => item.assetKey)} />
 
       {data.length && visibleAssets.length ? (
         <ChartFrame fallback={<div className="empty">Loading chart…</div>}>
@@ -64,18 +67,22 @@ export function CorrelationChartCard({
                     return [Number.isFinite(n) ? n.toFixed(2) : String(value), String(name)]
                   }}
                 />
-                {visibleAssets.map((item) => (
-                  <Line
-                    key={item.assetKey}
-                    type="monotone"
-                    dataKey={item.assetKey}
-                    dot={false}
-                    stroke={ASSETS[item.assetKey].accent}
-                    strokeWidth={2}
-                    name={item.assetKey}
-                    connectNulls
-                  />
-                ))}
+                {visibleAssets.map((item) => {
+                  const stable = ASSETS[item.assetKey].stable
+                  return (
+                    <Line
+                      key={item.assetKey}
+                      type="monotone"
+                      dataKey={item.assetKey}
+                      dot={false}
+                      stroke={ASSETS[item.assetKey].accent}
+                      strokeWidth={stable ? 1.25 : 2}
+                      strokeOpacity={stable ? 0.45 : 1}
+                      name={item.assetKey}
+                      connectNulls
+                    />
+                  )
+                })}
               </LineChart>
             )
           }}
