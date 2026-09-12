@@ -247,6 +247,15 @@ export function SupportDeveloperModal({
           })}
         </div>
 
+        {/* Not everyone here holds crypto; a card or PayPal goes through Ko-fi. */}
+        <div className="supportKofi">
+          Prefer a card?{' '}
+          <a href="https://ko-fi.com/edgarasneverdauskas" target="_blank" rel="noopener noreferrer">
+            Buy me a coffee on Ko-fi
+          </a>
+          .
+        </div>
+
         <div className="supportFooter muted small">
           <a
             href="https://github.com/Evirtual/bitcoin-analytics"

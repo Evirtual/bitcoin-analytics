@@ -78,6 +78,12 @@ If you ever deploy under `https://<owner>.github.io/<repo>/` instead (no custom 
 
 - `VITE_BASE=/<repo>/`
 
+## Support
+
+The dashboard is free and open source. The *Support the developer* panel in
+the app takes crypto on four networks, or a card or PayPal through
+[Ko-fi](https://ko-fi.com/edgarasneverdauskas) — one-off or monthly, nothing locked behind it.
+
 ### Local Pages-like build (optional)
 
 Test locally with the same base as production:
