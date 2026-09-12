@@ -96,3 +96,9 @@ Test locally with the same base as production:
   - `$env:VITE_BASE='/'; npm run build`
 - bash:
   - `VITE_BASE=/ npm run build`
+
+## Licence
+
+[AGPL-3.0](LICENSE). Use it, read it, change it, share it; if you run a
+changed version as a service for others, publish your changes too.
+© 2025–2026 Edgaras Neverdauskas.
