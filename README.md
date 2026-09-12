@@ -1,4 +1,8 @@
-## Bitcoin Analytics
+<p align="center"><img src="public/favicon.svg" width="112" alt="The Bitcoin mark"></p>
+
+# Bitcoin Analytics
+
+[![Deploy to GitHub Pages](https://github.com/Evirtual/bitcoin-analytics/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/Evirtual/bitcoin-analytics/actions/workflows/deploy-pages.yml)
 
 React + TypeScript + Vite dashboard for:
 
